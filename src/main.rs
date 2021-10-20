@@ -17,25 +17,43 @@ async fn ctrlc_handler(tx: broadcast::Sender<()>) {
     tx.send((())).expect("TODO");
 }
 //clap rust -> cmd
+<<<<<<< HEAD
 fn read_input() {
+=======
+async fn read_input(mut rx: watch::Receiver<&str>) {
+>>>>>>> 36c8c64 (Added send to can function)
     let mut line = String::new();
     let stdin = io::stdin();
     let re_send = Regex::new("^send").unwrap();
     //let handle_send = tokio::spawn(async move {send_can()}.await );
 
     loop {
+<<<<<<< HEAD
+=======
+        // if rx.changed().await.is_ok() {
+        //     println!("Stop processing user input");
+        //     break;
+        // }
+>>>>>>> 36c8c64 (Added send to can function)
         stdin.lock().read_line(&mut line).expect("Could not read line");
+
         let op = line.trim_right();
         
         if op == "EXIT" {
             break;
+<<<<<<< HEAD
         } else if re_send.is_match(op) {
             tokio::spawn(async move {send_can(op.to_string())}.await).await;
+=======
+        } else if op == "send" {
+            send_can();
+>>>>>>> 36c8c64 (Added send to can function)
         }
         line.clear();
     }
 }
 
+<<<<<<< HEAD
 async fn send_can(cmd: String) {
     let re_canid = Regex::new(r".* -id (\d+)").unwrap();
     let re_candata = Regex::new(r".* -m [[:punct:]](.*)[[:punct:]]").unwrap();
@@ -60,6 +78,19 @@ async fn send_can(cmd: String) {
     // send(canid, msg);
 }
 
+=======
+fn send_can() {
+    let mut canid = String::new();
+    let mut msg = String::new();
+    let mut stdin = io::stdin();
+
+    println!("CAN ID:");
+    stdin.lock().read_line(&mut canid).expect("Could not read line");
+    println!("Message:");
+    stdin.lock().read_line(&mut msg).expect("Could not read line");
+    send(canid, msg);
+}
+>>>>>>> 36c8c64 (Added send to can function)
 
 fn send(canid : String, msg : String) {
     println!("Message Sent \nid: {}message: {}", canid, msg);
@@ -74,6 +105,14 @@ async fn main() {
         read_input()
     });
 
+<<<<<<< HEAD
     ctrlc_handler(tx).await;
     std::process::exit(0);
+=======
+    // Calling `.await` on `op` starts executing `say_world`.
+    op.await;
+    handle_input.await;
+    handle_ctrl_c.await;
+
+>>>>>>> 36c8c64 (Added send to can function)
 }
