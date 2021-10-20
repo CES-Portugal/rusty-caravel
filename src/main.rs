@@ -12,25 +12,43 @@ async fn ctrlc_handler(tx: watch::Sender<&str>) {
     println!("closing...");
     tx.send("world").expect("TODO");
 }
-
+//clap rust -> cmd
 async fn read_input(mut rx: watch::Receiver<&str>) {
     let mut line = String::new();
     let stdin = io::stdin();
 
     loop {
-        if rx.changed().await.is_ok() {
-            println!("Stop processing user input");
-            break;
-        }
+        // if rx.changed().await.is_ok() {
+        //     println!("Stop processing user input");
+        //     break;
+        // }
         stdin.lock().read_line(&mut line).expect("Could not read line");
+
         let op = line.trim_right();
         if op == "EXIT" {
             break;
+        } else if op == "send" {
+            send_can();
         }
         line.clear()
     }
 }
 
+fn send_can() {
+    let mut canid = String::new();
+    let mut msg = String::new();
+    let mut stdin = io::stdin();
+
+    println!("CAN ID:");
+    stdin.lock().read_line(&mut canid).expect("Could not read line");
+    println!("Message:");
+    stdin.lock().read_line(&mut msg).expect("Could not read line");
+    send(canid, msg);
+}
+
+fn send(canid : String, msg : String) {
+    println!("Message Sent \nid: {}message: {}", canid, msg);
+}
 
 #[tokio::main]
 async fn main() {
@@ -49,4 +67,5 @@ async fn main() {
     op.await;
     handle_input.await;
     handle_ctrl_c.await;
+
 }
