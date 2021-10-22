@@ -3,30 +3,27 @@ use tokio::signal;
 use tokio::sync::watch;
 use tokio::time::{sleep, Duration};
 use regex::Regex;
+use tokio::sync::broadcast;
+use tokio::task;
 
 async fn say_world() {
     println!("world");
 }
 
-async fn ctrlc_handler(tx: watch::Sender<&str>) {
+async fn ctrlc_handler(tx: broadcast::Sender<()>) {
     signal::ctrl_c().await;
-    println!("closing...");
-    tx.send("world").expect("TODO");
+    println!();
+    println!("Closing...");
+    tx.send((())).expect("TODO");
 }
 //clap rust -> cmd
-
-async fn read_input(mut rx: watch::Receiver<&str>) {
+fn read_input() {
     let mut line = String::new();
     let stdin = io::stdin();
     let re_send = Regex::new("^send").unwrap();
     //let handle_send = tokio::spawn(async move {send_can()}.await );
 
     loop {
-
-        // if rx.changed().await.is_ok() {
-        //     println!("Stop processing user input");
-        //     break;
-        // }
         stdin.lock().read_line(&mut line).expect("Could not read line");
         let op = line.trim_right();
         
@@ -35,7 +32,7 @@ async fn read_input(mut rx: watch::Receiver<&str>) {
         } else if re_send.is_match(op) {
             tokio::spawn(async move {send_can(op.to_string())}.await).await;
         }
-        line.clear()
+        line.clear();
     }
 }
 
@@ -70,21 +67,13 @@ fn send(canid : String, msg : String) {
 
 #[tokio::main]
 async fn main() {
-    let (tx, mut rx) = watch::channel("ctrl_c");
-
-    let handle_input = tokio::spawn(async move {ctrlc_handler(tx)}.await );
-    let handle_ctrl_c = tokio::spawn(async move {read_input(rx)}.await );
-
-    // Calling `say_world()` does not execute the body of `say_world()`.
-    let op = say_world();
-
-    // This println! comes first
-    println!("hello");
-
-    // Calling `.await` on `op` starts executing `say_world`.
-    op.await;
-    handle_input.await;
-    handle_ctrl_c.await;
+    let (tx, mut rx) = broadcast::channel(1);
 
 
+    let res = task::spawn_blocking(move || {
+        read_input()
+    });
+
+    ctrlc_handler(tx).await;
+    std::process::exit(0);
 }
