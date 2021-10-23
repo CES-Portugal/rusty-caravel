@@ -6,6 +6,10 @@ use regex::Regex;
 use tokio::sync::broadcast;
 use tokio::task;
 
+mod actors;
+
+use actors::stdin::InteractiveParserHandle;
+
 async fn say_world() {
     println!("world");
 }
@@ -30,7 +34,7 @@ fn read_input() {
         if op == "EXIT" {
             break;
         } else if re_send.is_match(op) {
-            tokio::spawn(async move {send_can(op.to_string())}.await).await;
+            //tokio::spawn(async move {send_can(op.to_string())}.await).await;
         }
         line.clear();
     }
@@ -69,11 +73,14 @@ fn send(canid : String, msg : String) {
 async fn main() {
     let (tx, mut rx) = broadcast::channel(1);
 
+    InteractiveParserHandle::new();
 
-    let res = task::spawn_blocking(move || {
-        read_input()
-    });
+
+    //let res = task::spawn_blocking(move || {
+    //    read_input()
+    //});
 
     ctrlc_handler(tx).await;
     std::process::exit(0);
 }
+
