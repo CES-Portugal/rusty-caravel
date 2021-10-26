@@ -7,38 +7,93 @@ use tokio::sync::broadcast;
 use tokio::task;
 
 mod actors;
+use actors::stdin::StdInLinesHandle;
+use actors::sender_can::SenderCANHandle;
 
-use actors::stdin::InteractiveParserHandle;
+fn start_reading_stdin_lines(
+    sender: tokio::sync::mpsc::Sender<String>,
+    runtime: tokio::runtime::Handle
+) {
+    std::thread::spawn(move || {
+        let stdin = std::io::stdin();
+        let mut line_buf = String::new();
+        while let Ok(_) = stdin.read_line(&mut line_buf) {
+            let line = line_buf.trim_end().to_string();
+            line_buf.clear();
+            let sender2 = sender.clone();
 
-async fn say_world() {
-    println!("world");
-}
-
-async fn ctrlc_handler(tx: broadcast::Sender<()>) {
-    signal::ctrl_c().await;
-    println!();
-    println!("Closing...");
-    tx.send((())).expect("TODO");
-}
-//clap rust -> cmd
-fn read_input() {
-    let mut line = String::new();
-    let stdin = io::stdin();
-    let re_send = Regex::new("^send").unwrap();
-    //let handle_send = tokio::spawn(async move {send_can()}.await );
-
-    loop {
-        stdin.lock().read_line(&mut line).expect("Could not read line");
-        let op = line.trim_right();
-        
-        if op == "EXIT" {
-            break;
-        } else if re_send.is_match(op) {
-            //tokio::spawn(async move {send_can(op.to_string())}.await).await;
+            runtime.spawn(async move {
+                let result = sender2.send(line).await;
+                if let Err(error) = result {
+                    println!("start_reading_stdin_lines send error: {:?}", error);
+                }
+            });
         }
-        line.clear();
+    });
+}
+
+fn start_activity_until_shutdown(watch_sender: tokio::sync::watch::Sender<bool>) {
+    tokio::spawn(async move {
+        signal::ctrl_c().await;
+        println!("Exiting after Ctr+C");
+        let result = watch_sender.send(true);
+        if let Err(error) = result {
+            println!("watch_sender send error: {:?}", error);
+        }
+    });
+}
+
+async fn read_input(
+    mut line_receiver: tokio::sync::mpsc::Receiver<String>,
+    mut watch_receiver: tokio::sync::watch::Receiver<bool>,
+    mut sender: SenderCANHandle
+) {
+    loop {
+        tokio::select! {
+            Some(line) = line_receiver.recv() => {
+                // process the input
+                match line.as_str() {
+                    "exit" => {
+                        println!("exiting manually...");
+                        break;
+                    },
+                    "send" => {
+                        sender.send_can_message(0x69, [1,2,3]).await;
+                    }
+                    unexpected_line => {
+                        println!("unexpected command: {}", unexpected_line);
+                    }
+                }
+            }
+            Ok(_) = watch_receiver.changed() => {
+                println!("shutdown");
+                break;
+            }
+        }
     }
 }
+
+//clap rust -> cmd
+//fn read_input(sender: SenderCANHandle) {
+//    let mut line = String::new();
+//    let stdin = io::stdin();
+//    let re_send = Regex::new("^send").unwrap();
+//    //let handle_send = tokio::spawn(async move {send_can()}.await );
+//
+//    loop {
+//        stdin.lock().read_line(&mut line).expect("Could not read line");
+//        let op = line.trim_right();
+//        
+//        if op == "EXIT" {
+//            break;
+//        } else if re_send.is_match(op) {
+//            println!("HERE");
+//            sender.send_can_message(1, [1,2,3]);
+//        }
+//        println!("=> {:?}", op);
+//        line.clear();
+//    }
+//}
 
 async fn send_can(cmd: String) {
     let re_canid = Regex::new(r".* -id (\d+)").unwrap();
@@ -71,16 +126,25 @@ fn send(canid : String, msg : String) {
 
 #[tokio::main]
 async fn main() {
-    let (tx, mut rx) = broadcast::channel(1);
 
-    InteractiveParserHandle::new();
+    let (watch_sender, watch_receiver) = tokio::sync::watch::channel(false);
 
+    let sender = SenderCANHandle::new();
 
-    //let res = task::spawn_blocking(move || {
-    //    read_input()
-    //});
+    let stdin  = StdInLinesHandle::new(
+        tokio::runtime::Handle::current(),
+        watch_receiver.clone(),
+        sender.clone()
+    );
 
-    ctrlc_handler(tx).await;
-    std::process::exit(0);
+    //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
+    //start_reading_stdin_lines(line_sender, );
+
+    // this will send a shutdown signal at some point
+    start_activity_until_shutdown(watch_sender);
+
+    stdin.spawn_handle.await;
+
+    //read_input(line_receiver, watch_receiver, sender).await;
 }
 
