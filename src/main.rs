@@ -42,15 +42,22 @@ async fn read_input(mut rx: watch::Receiver<&str>) {
 async fn send_can(cmd: String) {
     let re_canid = Regex::new(r".* -id (\d+)").unwrap();
     let re_candata = Regex::new(r".* -m [[:punct:]](.*)[[:punct:]]").unwrap();
-    let mut canid = String::new();
+    //wait for message
+    //let mut canid = String::new();
     let mut msg = String::new();
     let mut stdin = io::stdin();
-    // println!("match, {}", &cmd);
-    if re_canid.is_match(&cmd) {
-        let cap = re_canid.captures(&cmd).unwrap();
-        canid = cap[1].to_string();
-        println!("{} -> CAN id", canid);
-    }
+
+    let canid = match re_canid.captures(&cmd){
+        Some (cap) => cap[1].to_string(),
+        None => String::new()
+    };
+    println!("{} -> CAN id", canid);
+    // if re_canid.is_match(&cmd) {
+        
+    //     let cap = re_canid.captures(&cmd).unwrap();
+    //     canid = cap[1].to_string();
+    //     println!("{} -> CAN id", canid);
+    // }
     if re_candata.is_match(&cmd) {
         let cap = re_candata.captures(&cmd).unwrap();
         msg = cap[1].to_string();
