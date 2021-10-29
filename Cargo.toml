@@ -9,4 +9,7 @@ edition = "2018"
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 regex = "1"
-
+anyhow = "1.0.32"
+clap = "2.33.2"
+structopt = "0.3.16"
+shell-words = "1.0.0"
