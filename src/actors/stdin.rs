@@ -1,4 +1,5 @@
 use super::sender_can::SenderCANHandle;
+use super::commands;
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
@@ -16,22 +17,56 @@ impl StdInLines {
     }
 
     async fn handle_command(&mut self, msg: String) -> bool {
-        match msg.as_str() {
-            "exit" => { 
-                println!("exiting manually..."); 
-                false 
-            },
-            "send" => {
-                self.sender.send_can_message(0x69, [1,2,3]).await;
-                true
-            },
-            unexpected_line => {
-                println!("unexpected command: {}", unexpected_line);
-                true
+        let parse_result = commands::parse(&msg);
+
+        match parse_result {
+            Ok(commands::ParsedCommand::Boss(cmd)) => {
+                let cmd_output = execute_command(cmd);
+                println!("IIIIIIIIIIIIIIS ok");
+                //writeln!(tcp.get_ref(), "{}", cmd_output)?;
+            }
+            Ok(commands::ParsedCommand::Exit) => {println!("OOPS")},
+            Err(e) => {
+                //writeln!(tcp.get_ref(), "{}", e)?;
+                println!("{}",e);
             }
         }
+        // match msg.as_str() {
+        //     "exit" => { 
+        //         println!("exiting manually..."); 
+        //         false 
+        //     },
+        //     "send" => {
+        //         self.sender.send_can_message(0x69, [1,2,3]).await;
+        //         true
+        //     },
+        //     unexpected_line => {
+        //         println!("unexpected command: {}", unexpected_line);
+        //         true
+        //     }
+        // }
+        true
     }
 }
+
+
+fn execute_command(cmd: BossCommand) -> impl std::fmt::Display {
+    format!("ran command: {:?}", cmd)
+}
+
+#[derive(Debug)]
+pub enum BossCommand {
+    SendCan {
+        id: u32,
+        message: String,
+    },
+    ReceiveCan {
+        id: u32,
+        message: String,
+    },
+}
+
+
 
 async fn run(mut actor: StdInLines) {
     println!("Processing INPUTS");
