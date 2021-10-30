@@ -3,14 +3,6 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use anyhow::anyhow;
 
-#[derive(Debug)]
-#[derive(StructOpt)]
-enum Send {
-    Can {
-        id: u32,
-        message: String,
-    },
-}
 
 #[derive(Debug)]
 #[derive(StructOpt)]
@@ -24,15 +16,67 @@ enum Receive {
 #[derive(StructOpt)]
 #[structopt(
     name = "rusty-can",
+    version = "0.1.0",
     // NoBinaryName means that clap won't expect the first argument in the
     // list to be the cli binary's path
     setting(clap::AppSettings::NoBinaryName),
-    global_setting(clap::AppSettings::ColoredHelp)
+    global_setting(clap::AppSettings::ColoredHelp),
+    arg( 
+        clap::Arg::with_name("id")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .short("i")
+            .long("canid")
+            .help("Id of can message")
+            .default_value("0x40A"),
+        ),
+    arg( 
+        clap::Arg::with_name("message")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .short("m")
+            .long("message")
+            .help("message to be send")
+            .default_value("deadbeef"),
+    ),
+    arg(
+        clap::Arg::with_name("test1"),
+    ),
+    arg(
+        clap::Arg::with_name("test2"),
+    ),
+    subcommand(
+        clap::SubCommand::with_name("send")
+            .about("Used to send can messages")
+            .arg(clap::Arg::with_name("id")
+                .takes_value(true)
+                .multiple(false)
+                .required(false)
+                .short("i")
+                .long("canid")
+                .help("Id of can message")
+                .default_value("0x40A"),
+            )
+            .arg(clap::Arg::with_name("message")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .short("m")
+            .long("message")
+            .help("message to be send")
+            .default_value("deadbeef"),
+            )
+        ),
 )]
 
 #[derive(Debug)]
 enum CanCommand {
-    Send(Send),
+    Send{
+        id: u32,
+        message: String,
+    },
     Receive(Receive),
     Exit,
 }
@@ -65,9 +109,7 @@ pub fn parse(command: &str) -> anyhow::Result<ParsedCommand> {
     }
     let cmd = match cmd {
         CanCommand::Exit => ParsedCommand::Exit,
-        CanCommand::Send(send) => match send {
-            Send::Can { id, message } => c!(SendCan{ id, message }),
-        },
+        CanCommand::Send { id, message } => c!(SendCan{ id, message }),
         CanCommand::Receive(receive) => match receive {
             Receive::Can { id, message } => c!(ReceiveCan{ id, message }),
         },

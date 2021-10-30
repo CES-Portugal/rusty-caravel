@@ -1,5 +1,7 @@
 use super::sender_can::SenderCANHandle;
 use super::commands;
+use std::io;
+use std::io::Write; 
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
@@ -78,6 +80,8 @@ pub enum BossCommand {
 async fn run(mut actor: StdInLines) {
     println!("Processing INPUTS");
     loop {
+        print!("> ");
+        io::stdout().flush().unwrap();
         tokio::select! {
             Some(line) = actor.line_receiver.recv() => {
                 if !actor.handle_command(line).await {
