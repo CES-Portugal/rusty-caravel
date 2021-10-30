@@ -59,7 +59,7 @@ async fn read_input(
                         break;
                     },
                     "send" => {
-                        sender.send_can_message(0x69, [1,2,3]).await;
+                        //sender.send_can_message(0x69, [1,2,3]).await;
                     }
                     unexpected_line => {
                         println!("unexpected command: {}", unexpected_line);

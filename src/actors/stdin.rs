@@ -21,9 +21,8 @@ impl StdInLines {
 
         match parse_result {
             Ok(commands::ParsedCommand::Boss(cmd)) => {
-                let cmd_output = execute_command(cmd);
+                let cmd_output = self.execute_command(cmd).await;
                 println!("IIIIIIIIIIIIIIS ok");
-                //writeln!(tcp.get_ref(), "{}", cmd_output)?;
             }
             Ok(commands::ParsedCommand::Exit) => {println!("OOPS")},
             Err(e) => {
@@ -47,12 +46,20 @@ impl StdInLines {
         // }
         true
     }
+
+    async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
+    
+        let test = match cmd {
+            BossCommand::SendCan { id, message } => self.sender.send_can_message(id, message).await,
+            BossCommand::ReceiveCan { id, message } => println!("Receive can - id {:?}, message {:?}", id, message),
+            //BossCommand::Exit => println!("Gubay"),
+        };
+        format!("ran command: {:?}", test)
+    }
 }
 
 
-fn execute_command(cmd: BossCommand) -> impl std::fmt::Display {
-    format!("ran command: {:?}", cmd)
-}
+
 
 #[derive(Debug)]
 pub enum BossCommand {
