@@ -8,7 +8,7 @@ struct SenderCAN {
 enum SenderCANMessages {
     SendToID {
         id: u32,
-        message: [i32; 3]
+        message: String
     }
 }
 
@@ -55,7 +55,7 @@ impl SenderCANHandle {
     }
 
 
-    pub async fn send_can_message(&self, id: u32, message: [i32; 3]) {
+    pub async fn send_can_message(&self, id: u32, message: String) {
         let msg = SenderCANMessages::SendToID {
             id, message
         };
