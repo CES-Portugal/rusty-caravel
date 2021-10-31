@@ -19,17 +19,21 @@ impl StdInLines {
     }
 
     async fn handle_command(&mut self, msg: String) -> bool {
+        println!("msg recebida -> {:?}", msg);
         let parse_result = commands::parse(&msg);
 
         match parse_result {
             Ok(commands::ParsedCommand::Boss(cmd)) => {
                 let cmd_output = self.execute_command(cmd).await;
-                println!("IIIIIIIIIIIIIIS ok");
+                true
             }
-            Ok(commands::ParsedCommand::Exit) => {println!("OOPS")},
+            Ok(commands::ParsedCommand::Exit) => {
+                println!("exiting manually..."); 
+                false
+            },
             Err(e) => {
-                //writeln!(tcp.get_ref(), "{}", e)?;
                 println!("{}",e);
+                true
             }
         }
         // match msg.as_str() {
@@ -46,15 +50,14 @@ impl StdInLines {
         //         true
         //     }
         // }
-        true
+        //true
     }
 
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
     
         let test = match cmd {
-            BossCommand::SendCan { id, message } => self.sender.send_can_message(id, message).await,
-            BossCommand::ReceiveCan { id, message } => println!("Receive can - id {:?}, message {:?}", id, message),
-            //BossCommand::Exit => println!("Gubay"),
+            BossCommand::SendCan { id, message, cycle_time } => self.sender.send_can_message(id, message, cycle_time).await,
+            BossCommand::ReceiveCan { id, nr_of_messages } => println!("Receive can - id {:?}, {:?} times.", id, nr_of_messages),
         };
         format!("ran command: {:?}", test)
     }
@@ -62,16 +65,16 @@ impl StdInLines {
 
 
 
-
 #[derive(Debug)]
 pub enum BossCommand {
     SendCan {
-        id: u32,
-        message: String,
+        id: Option<String>,
+        message: Option<String>,
+        cycle_time: Option<String>,
     },
     ReceiveCan {
-        id: u32,
-        message: String,
+        id: Option<String>,
+        nr_of_messages: Option<String>
     },
 }
 
