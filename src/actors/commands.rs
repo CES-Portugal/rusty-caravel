@@ -4,15 +4,14 @@ use structopt::StructOpt;
 use anyhow::anyhow;
 
 
-// #[derive(Debug)]
-// #[derive(StructOpt)]
-// struct Receive {
-//     Can {
-//         id: u32,
-//         message: String,
-//         cycle_time: Option<String>,
-//     },
-// }
+#[derive(Debug)]
+#[derive(StructOpt)]
+enum Receive {
+    Can {
+        id: u32,
+        message: String,
+    },
+}
 
 #[derive(StructOpt)]
 #[structopt(
@@ -22,86 +21,63 @@ use anyhow::anyhow;
     // list to be the cli binary's path
     setting(clap::AppSettings::NoBinaryName),
     global_setting(clap::AppSettings::ColoredHelp),
-    setting(clap::AppSettings::ArgRequiredElseHelp),
+    arg( 
+        clap::Arg::with_name("id")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .short("i")
+            .long("canid")
+            .help("Id of can message")
+            .default_value("0x40A"),
+        ),
+    arg( 
+        clap::Arg::with_name("message")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .short("m")
+            .long("message")
+            .help("message to be send")
+            .default_value("deadbeef"),
+    ),
+    arg(
+        clap::Arg::with_name("test1"),
+    ),
+    arg(
+        clap::Arg::with_name("test2"),
+    ),
     subcommand(
         clap::SubCommand::with_name("send")
             .about("Used to send can messages")
-            .arg(
-                clap::Arg::with_name("id")
-                    .takes_value(true)
-                    .multiple(false)
-                    .required(false)
-                    .short("i")
-                    .long("canid")
-                    .help("Id of can message")
-                    .default_value("0x40A"),
+            .arg(clap::Arg::with_name("id")
+                .takes_value(true)
+                .multiple(false)
+                .required(false)
+                .short("i")
+                .long("canid")
+                .help("Id of can message")
+                .default_value("0x40A"),
             )
-            .arg(
-                clap::Arg::with_name("message")
-                    .takes_value(true)
-                    .multiple(false)
-                    .required(false)
-                    .short("m")
-                    .long("message")
-                    .help("message to be send")
-                    .default_value("deadbeef"),
+            .arg(clap::Arg::with_name("message")
+            .takes_value(true)
+            .multiple(false)
+            .required(false)
+            .short("m")
+            .long("message")
+            .help("message to be send")
+            .default_value("deadbeef"),
             )
-            .arg(
-                clap::Arg::with_name("cyclic")
-                    .takes_value(true)
-                    .multiple(false)
-                    .required(false)
-                    .short("c")
-                    .long("cyclic")
-                    .help("cycle time in ms. 0 if not cyclic.")
-                    .default_value("0"),
-            )
-        ),
-    subcommand(
-        clap::SubCommand::with_name("receive")
-            .about("Used to receive can messages")
-            .arg(
-                clap::Arg::with_name("id")
-                    .takes_value(true)
-                    .multiple(false)
-                    .required(false)
-                    .short("i")
-                    .long("canid")
-                    .help("listen to this can ID")
-                    .default_value("0x40A"),
-            )
-            .arg(
-                clap::Arg::with_name("number of messages")
-                    .takes_value(true)
-                    .multiple(false)
-                    .required(false)
-                    .short("n")
-                    .long("messages")
-                    .help("number of messages to receive")
-                    .default_value("1"),
-            )
-        ),
-    subcommand(
-        clap::SubCommand::with_name("exit")
-            .about("exit the cli")
-            .help("exit the cli")
         ),
 )]
 
 #[derive(Debug)]
 enum CanCommand {
-    Send {
-        id: Option<String>, 
-        message: Option<String>, 
-        cycle_time: Option<String>
+    Send{
+        id: u32,
+        message: String,
     },
-    #[structopt(name = "receive")]
-    Receive {
-        #[structopt(short = "i")]
-        id: Option<String>,
-        #[structopt(short = "n")]
-        nr_of_messages: Option<String>
-    },
+    Receive(Receive),
     Exit,
 }
 
@@ -124,7 +100,7 @@ pub fn parse(command: &str) -> anyhow::Result<ParsedCommand> {
     };
     //Err(anyhow!("Error qualquer"))
 
-    println!("{:?} se feliz", cmd);
+    // println!("{:?} se feliz", cmd);
     macro_rules! c {
         // have $($args)* in order to handle Command::Foo(foo) or Command::Bar { bar: baz }
         ($cmd:ident$($args:tt)*) => {
@@ -133,8 +109,10 @@ pub fn parse(command: &str) -> anyhow::Result<ParsedCommand> {
     }
     let cmd = match cmd {
         CanCommand::Exit => ParsedCommand::Exit,
-        CanCommand::Send { id, cycle_time, message} => c!(SendCan{ id, cycle_time, message }),
-        CanCommand::Receive { id, nr_of_messages  } => c!(ReceiveCan{ id, nr_of_messages }),
+        CanCommand::Send { id, message } => c!(SendCan{ id, message }),
+        CanCommand::Receive(receive) => match receive {
+            Receive::Can { id, message } => c!(ReceiveCan{ id, message }),
+        },
         // about 15 more commands in the real version...
     };
 
