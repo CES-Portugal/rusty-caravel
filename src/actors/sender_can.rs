@@ -7,9 +7,8 @@ struct SenderCAN {
 
 enum SenderCANMessages {
     SendToID {
-        id: Option<String>,
-        message: Option<String>,
-        cycle_time: Option<String>,
+        id: u32,
+        message: String
     }
 }
 
@@ -23,8 +22,8 @@ impl SenderCAN {
 
     fn handle_message(&mut self, msg: SenderCANMessages) {
         match msg {
-            SenderCANMessages::SendToID {id, message, cycle_time}=> {
-                println!("Received {:?}, sending to {:?} with cycle time {:?} ms", message, id, cycle_time);
+            SenderCANMessages::SendToID {id, message}=> {
+                println!("Received {:?}, sending to {:?}...", message, id);
             },
         }
     }
@@ -56,9 +55,9 @@ impl SenderCANHandle {
     }
 
 
-    pub async fn send_can_message(&self, id: Option<String>, message: Option<String>, cycle_time: Option<String>) {
+    pub async fn send_can_message(&self, id: u32, message: String) {
         let msg = SenderCANMessages::SendToID {
-            id, message, cycle_time,
+            id, message
         };
 
         let _ = self.sender.send(msg).await;
