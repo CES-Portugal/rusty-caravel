@@ -4,15 +4,22 @@ use structopt::StructOpt;
 use anyhow::anyhow;
 
 
-// #[derive(Debug)]
-// #[derive(StructOpt)]
-// struct Receive {
-//     Can {
-//         id: u32,
-//         message: String,
-//         cycle_time: Option<String>,
-//     },
-// }
+#[derive(Debug)]
+#[derive(StructOpt)]
+struct Send {
+    id: Option<String>, 
+    message: Option<String>,
+    cycletime: Option<String>,
+}
+
+
+#[derive(Debug)]
+#[derive(StructOpt)]
+struct Receive {
+    id: Option<String>,
+    nrofmessages: Option<String>,
+}
+
 
 #[derive(StructOpt)]
 #[structopt(
@@ -47,12 +54,12 @@ use anyhow::anyhow;
                     .default_value("deadbeef"),
             )
             .arg(
-                clap::Arg::with_name("cyclic")
+                clap::Arg::with_name("cycletime")
                     .takes_value(true)
                     .multiple(false)
                     .required(false)
                     .short("c")
-                    .long("cyclic")
+                    .long("cycletime")
                     .help("cycle time in ms. 0 if not cyclic.")
                     .default_value("0"),
             )
@@ -71,12 +78,12 @@ use anyhow::anyhow;
                     .default_value("0x40A"),
             )
             .arg(
-                clap::Arg::with_name("number of messages")
+                clap::Arg::with_name("nrofmessages")
                     .takes_value(true)
                     .multiple(false)
                     .required(false)
                     .short("n")
-                    .long("messages")
+                    .long("nrofmessages")
                     .help("number of messages to receive")
                     .default_value("1"),
             )
@@ -88,20 +95,11 @@ use anyhow::anyhow;
         ),
 )]
 
+
 #[derive(Debug)]
 enum CanCommand {
-    Send {
-        id: Option<String>, 
-        message: Option<String>, 
-        cycle_time: Option<String>
-    },
-    #[structopt(name = "receive")]
-    Receive {
-        #[structopt(short = "i")]
-        id: Option<String>,
-        #[structopt(short = "n")]
-        nr_of_messages: Option<String>
-    },
+    Send(Send),
+    Receive(Receive),
     Exit,
 }
 
@@ -114,27 +112,32 @@ pub enum ParsedCommand {
 
 pub fn parse(command: &str) -> anyhow::Result<ParsedCommand> {
     let words = shell_words::split(command)?;
+    
     // StructOpt has a "safe" version as well; errors from this include invalid commands
-    // but also just `--help` invocations; it's all fine since we just write!(tcp, "{}", err)
+    // but also just `--help` invocations; 
     // and the fmt::Display impl takes care of it all
-    //let cmd = CanCommand::from_iter_safe(words);
     let cmd = match CanCommand::from_iter_safe(words) {
         Ok(cmd) => cmd,
         Err(error) => return Err(anyhow!(error.message)),
     };
-    //Err(anyhow!("Error qualquer"))
 
-    println!("{:?} se feliz", cmd);
+
+    //println!("{:?} se feliz", cmd);
     macro_rules! c {
         // have $($args)* in order to handle Command::Foo(foo) or Command::Bar { bar: baz }
         ($cmd:ident$($args:tt)*) => {
             ParsedCommand::Boss(BossCommand::$cmd$($args)*)
         };
     }
+
     let cmd = match cmd {
         CanCommand::Exit => ParsedCommand::Exit,
-        CanCommand::Send { id, cycle_time, message} => c!(SendCan{ id, cycle_time, message }),
-        CanCommand::Receive { id, nr_of_messages  } => c!(ReceiveCan{ id, nr_of_messages }),
+        CanCommand::Send(sendcmd) => match sendcmd {
+            Send { id, message, cycletime} => c!(SendCan{ id, message, cycletime}),
+        },
+        CanCommand::Receive(receivecmd) => match receivecmd {
+            Receive { id, nrofmessages} => c!(ReceiveCan{ id, nrofmessages}),
+        },
         // about 15 more commands in the real version...
     };
 

@@ -2,14 +2,13 @@ use std::io::{self, BufRead};
 use tokio::signal;
 use tokio::sync::watch;
 use tokio::time::{sleep, Duration};
-use regex::Regex;
 use tokio::sync::broadcast;
 use tokio::task;
 
 mod actors;
 use actors::stdin::StdInLinesHandle;
 use actors::sender_can::SenderCANHandle;
-//use actors::commands;
+use actors::receiver_can::ReceiverCANHandle;
 
 fn start_reading_stdin_lines(
     sender: tokio::sync::mpsc::Sender<String>,
@@ -74,56 +73,6 @@ async fn read_input(
     }
 }
 
-//clap rust -> cmd
-//fn read_input(sender: SenderCANHandle) {
-//    let mut line = String::new();
-//    let stdin = io::stdin();
-//    let re_send = Regex::new("^send").unwrap();
-//    //let handle_send = tokio::spawn(async move {send_can()}.await );
-//
-//    loop {
-//        stdin.lock().read_line(&mut line).expect("Could not read line");
-//        let op = line.trim_right();
-//        
-//        if op == "EXIT" {
-//            break;
-//        } else if re_send.is_match(op) {
-//            println!("HERE");
-//            sender.send_can_message(1, [1,2,3]);
-//        }
-//        println!("=> {:?}", op);
-//        line.clear();
-//    }
-//}
-
-async fn send_can(cmd: String) {
-    let re_canid = Regex::new(r".* -id (\d+)").unwrap();
-    let re_candata = Regex::new(r".* -m [[:punct:]](.*)[[:punct:]]").unwrap();
-    let mut canid = String::new();
-    let mut msg = String::new();
-    let mut stdin = io::stdin();
-    // println!("match, {}", &cmd);
-    if re_canid.is_match(&cmd) {
-        let cap = re_canid.captures(&cmd).unwrap();
-        canid = cap[1].to_string();
-        println!("{} -> CAN id", canid);
-    }
-    if re_candata.is_match(&cmd) {
-        let cap = re_candata.captures(&cmd).unwrap();
-        msg = cap[1].to_string();
-        println!("{} -> CAN data", msg);
-    }
-    // println!("CAN ID:");
-    // stdin.lock().read_line(&mut canid).expect("Could not read line");
-    // println!("Message:");
-    // stdin.lock().read_line(&mut msg).expect("Could not read line");
-    // send(canid, msg);
-}
-
-
-fn send(canid : String, msg : String) {
-    println!("Message Sent \nid: {}message: {}", canid, msg);
-}
 
 #[tokio::main]
 async fn main() {
@@ -132,10 +81,13 @@ async fn main() {
 
     let sender = SenderCANHandle::new();
 
+    let receiver = ReceiverCANHandle::new();
+
     let stdin  = StdInLinesHandle::new(
         tokio::runtime::Handle::current(),
         watch_receiver.clone(),
-        sender.clone()
+        sender.clone(),
+        receiver.clone(),
     );
 
     //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);

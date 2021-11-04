@@ -1,26 +1,30 @@
 use super::sender_can::SenderCANHandle;
 use super::commands;
-use super::receiver_can::receive_can;
+use super::receiver_can::ReceiverCANHandle;
 use std::io;
 use std::io::Write; 
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
     watch_receiver: tokio::sync::watch::Receiver<bool>,
-    sender: SenderCANHandle
+    sender: SenderCANHandle,
+    receiver: ReceiverCANHandle
 }
+
 
 impl StdInLines {
     fn new (
         line_receiver: tokio::sync::mpsc::Receiver<String>,
         watch_receiver: tokio::sync::watch::Receiver<bool>,
-        sender: SenderCANHandle
+        sender: SenderCANHandle,
+        receiver: ReceiverCANHandle
     ) -> StdInLines {
-        StdInLines { line_receiver, watch_receiver, sender }
+        StdInLines { line_receiver, watch_receiver, sender, receiver }
     }
 
     async fn handle_command(&mut self, msg: String) -> bool {
         println!("msg recebida -> {:?}", msg);
+        
         let parse_result = commands::parse(&msg);
 
         match parse_result {
@@ -55,14 +59,10 @@ impl StdInLines {
     }
 
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
-        
-        // let test = match cmd {
-        //     BossCommand::SendCan { id, message, cycle_time } => self.sender.send_can_message(id, message, cycle_time).await,
-        //     BossCommand::ReceiveCan { id, nr_of_messages } => receive_can(id, nr_of_messages),
-        // };
+
         match cmd {
-            BossCommand::SendCan { id, message, cycle_time } => self.sender.send_can_message(id, message, cycle_time).await,
-            BossCommand::ReceiveCan { id, nr_of_messages } => receive_can(id, nr_of_messages).await,
+            BossCommand::SendCan { id, message, cycletime } => self.sender.send_can_message(id, message, cycletime).await,
+            BossCommand::ReceiveCan { id, nrofmessages } => self.receiver.receive_can_msg(id, nrofmessages).await,
         };
         //format!("ran command: {:?}", test)
         format!("ran command: ")
@@ -70,20 +70,18 @@ impl StdInLines {
 }
 
 
-
 #[derive(Debug)]
 pub enum BossCommand {
     SendCan {
         id: Option<String>,
         message: Option<String>,
-        cycle_time: Option<String>,
+        cycletime: Option<String>,
     },
     ReceiveCan {
         id: Option<String>,
-        nr_of_messages: Option<String>
+        nrofmessages: Option<String>
     },
 }
-
 
 
 async fn run(mut actor: StdInLines) {
@@ -104,6 +102,7 @@ async fn run(mut actor: StdInLines) {
         }
     }
 }
+
 
 fn reading_stdin_lines(
     runtime: tokio::runtime::Handle,
@@ -136,18 +135,18 @@ impl StdInLinesHandle {
     pub fn new(
         runtime: tokio::runtime::Handle,
         watch_receiver: tokio::sync::watch::Receiver<bool>,
-        sender: SenderCANHandle
+        sender: SenderCANHandle,
+        receiver: ReceiverCANHandle
     ) -> StdInLinesHandle {
 
         let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
 
         reading_stdin_lines(runtime, line_sender);
 
-        let actor = StdInLines::new(line_receiver, watch_receiver, sender);
+        let actor = StdInLines::new(line_receiver, watch_receiver, sender, receiver);
 
         let spawn_handle = tokio::spawn(run(actor));
 
         Self {spawn_handle}
     }
-
 }
