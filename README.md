@@ -19,3 +19,7 @@ The following commands are accepted:
 Sends 1 time message with can id 35b and message "some message"
 2. `receive -i 40a -n 10`
 Waits to receive 10 times can message with id 40a
+
+## Build for raspberrypi
+
+`cargo build --target armv7-unknown-linux-gnueabihf`
