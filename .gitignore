@@ -1,2 +1,2 @@
-/target
-/cross-compiling-tools/raspberry
+/target/*
+/cross-compiling-tools/raspberrypi/*

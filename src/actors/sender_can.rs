@@ -1,16 +1,16 @@
 use tokio::sync::{oneshot, mpsc};
 
-struct SenderCAN {
-    receiver: mpsc::Receiver<SenderCANMessages>,
-    messages_sent: u32,
-}
-
 enum SenderCANMessages {
     SendToID {
         id: Option<String>,
         message: Option<String>,
         cycle_time: Option<String>,
     }
+}
+
+struct SenderCAN {
+    receiver: mpsc::Receiver<SenderCANMessages>,
+    messages_sent: u32,
 }
 
 impl SenderCAN {
