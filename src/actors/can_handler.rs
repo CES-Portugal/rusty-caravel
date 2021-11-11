@@ -1,8 +1,7 @@
-use futures_util::stream::StreamExt;
 use tokio_socketcan::{CANSocket, Error, CANFrame};
 
 
-pub async fn recv_can(frame: CANFrame) -> Result<(), Error> {
+pub async fn send_can(frame: CANFrame) -> Result<(), Error> {
 
     let socket_tx = CANSocket::open("vcan0")?;
     println!("writing on vcan0");

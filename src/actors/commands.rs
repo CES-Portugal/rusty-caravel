@@ -1,5 +1,4 @@
 use super::stdin::BossCommand;
-use std::str::FromStr;
 use structopt::StructOpt;
 use anyhow::anyhow;
 

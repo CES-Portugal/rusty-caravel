@@ -1,7 +1,7 @@
-use tokio::sync::{oneshot, mpsc};
+use tokio::sync::mpsc;
 //use futures_timer::Delay;
 //use std::time::Duration;
-use tokio_socketcan::{CANFrame, CANSocket, Error};
+use tokio_socketcan::CANFrame;
 use super::can_handler;
 
 enum SenderCANMessages {
@@ -28,18 +28,19 @@ impl SenderCAN {
     async fn handle_message(&mut self, msg: SenderCANMessages) {
         println!("can_handle");
         match msg {
-            SenderCANMessages::SendToID {id, message, cycle_time}=> {
+            SenderCANMessages::SendToID {id, message, cycle_time : _}=> {
                 println!("teste");
                 let frame = CANFrame::new(id.unwrap().parse::<u32>().unwrap(), message.unwrap().as_bytes(), false, false).unwrap();
-                let can_send_rcv = tokio::spawn(can_handler::recv_can(frame));
+                let send = tokio::spawn(can_handler::send_can(frame));
                 
                 println!("calling can handler");
-                can_send_rcv.await;
-                //socket_tx.write_frame(frame).await;
+                let result = send.await;
+                let _result = match result {
+                    Ok(res) => res,
+                    Err(error) => panic!("Problem with sending can message, {:?}", error),
+                };
+
                 println!("Msg Sent!");
-                // println!("Waiting 3 seconds");
-                // Delay::new(Duration::from_secs(3)).await;
-                //println!("Received {:?}, sending to {:?} with cycle time {:?} ms", message, id, cycle_time);
             },
         }
     }
@@ -49,7 +50,7 @@ async fn run(mut actor: SenderCAN) {
     println!("Running...");
 
     while let Some(msg) = actor.receiver.recv().await {
-        actor.handle_message(msg);
+        actor.handle_message(msg).await;
     }
 }
 
@@ -75,14 +76,6 @@ impl SenderCANHandle {
         let msg = SenderCANMessages::SendToID {
             id, message, cycle_time,
         };
-        // println!("teste");
-        // let frame = CANFrame::new(id.unwrap().parse::<u32>().unwrap(), message.unwrap().as_bytes(), false, false).unwrap();
-        // let can_send_rcv = tokio::spawn(can_handler::recv_can(frame));
-        
-        // println!("calling can handler");
-        // can_send_rcv.await;
-        //socket_tx.write_frame(frame).await;
-        //println!("Msg Sent!");
         let _ = self.sender.send(msg).await;
     }
 }
