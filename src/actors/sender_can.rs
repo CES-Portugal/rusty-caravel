@@ -1,7 +1,7 @@
-use tokio::sync::mpsc;
+use tokio::sync::{oneshot, mpsc};
 //use futures_timer::Delay;
 //use std::time::Duration;
-use tokio_socketcan::CANFrame;
+use tokio_socketcan::{CANFrame, CANSocket, Error};
 use super::can_handler;
 
 enum SenderCANMessages {
@@ -28,19 +28,18 @@ impl SenderCAN {
     async fn handle_message(&mut self, msg: SenderCANMessages) {
         println!("can_handle");
         match msg {
-            SenderCANMessages::SendToID {id, message, cycle_time : _}=> {
+            SenderCANMessages::SendToID {id, message, cycle_time}=> {
                 println!("teste");
                 let frame = CANFrame::new(id.unwrap().parse::<u32>().unwrap(), message.unwrap().as_bytes(), false, false).unwrap();
-                let send = tokio::spawn(can_handler::send_can(frame));
+                let can_send_rcv = tokio::spawn(can_handler::recv_can(frame));
                 
                 println!("calling can handler");
-                let result = send.await;
-                let _result = match result {
-                    Ok(res) => res,
-                    Err(error) => panic!("Problem with sending can message, {:?}", error),
-                };
-
+                can_send_rcv.await;
+                //socket_tx.write_frame(frame).await;
                 println!("Msg Sent!");
+                // println!("Waiting 3 seconds");
+                // Delay::new(Duration::from_secs(3)).await;
+                //println!("Received {:?}, sending to {:?} with cycle time {:?} ms", message, id, cycle_time);
             },
         }
     }
@@ -76,6 +75,7 @@ impl SenderCANHandle {
         let msg = SenderCANMessages::SendToID {
             id, message, cycle_time,
         };
+
         let _ = self.sender.send(msg).await;
     }
 }

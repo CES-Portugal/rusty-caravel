@@ -95,16 +95,14 @@ async fn main() {
         receiver.clone(),
     );
 
+    // let can_send_rcv = tokio::spawn(can_handler::recv_can());
     //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
     //start_reading_stdin_lines(line_sender, );
 
     // this will send a shutdown signal at some point
     start_activity_until_shutdown(watch_sender);
 
-    let res = stdin.spawn_handle.await;
-    let _res = match res {
-        Ok(res) => res,
-        Err(error) => panic!("Problem with stdin, {:?}", error),
-    };
+    stdin.spawn_handle.await;
+    //can_send_rcv.await;
     //read_input(line_receiver, watch_receiver, sender).await;
 }
