@@ -9,7 +9,7 @@ mod actors;
 use actors::stdin::StdInLinesHandle;
 use actors::sender_can::SenderCANHandle;
 use actors::receiver_can::ReceiverCANHandle;
-use actors::can_handler;
+//use actors::can_handler;
 
 fn start_reading_stdin_lines(
     sender: tokio::sync::mpsc::Sender<String>,
@@ -91,7 +91,7 @@ async fn main() {
         receiver.clone(),
     );
 
-    let can_send_rcv = tokio::spawn(can_handler::recv_can());
+    // let can_send_rcv = tokio::spawn(can_handler::recv_can());
     //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
     //start_reading_stdin_lines(line_sender, );
 
@@ -99,6 +99,6 @@ async fn main() {
     start_activity_until_shutdown(watch_sender);
 
     stdin.spawn_handle.await;
-    can_send_rcv.await;
+    //can_send_rcv.await;
     //read_input(line_receiver, watch_receiver, sender).await;
 }
