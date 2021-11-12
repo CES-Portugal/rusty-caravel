@@ -1,13 +1,4 @@
-<<<<<<< HEAD
-//use std::io::BufRead;
 use tokio::signal;
-//use tokio::sync::watch;
-//use tokio::time::{sleep, Duration};
-//use tokio::sync::broadcast;
-//use tokio::task;
-=======
-use tokio::signal;
->>>>>>> b04364f (feat: allow for windows builds)
 
 mod actors;
 mod util;
