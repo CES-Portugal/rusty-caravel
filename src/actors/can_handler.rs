@@ -1,15 +1,12 @@
-use futures_util::stream::StreamExt;
-use tokio_socketcan::{CANSocket, Error};
+use tokio_socketcan::{CANSocket, Error, CANFrame};
 
 
-pub async fn recv_can() -> Result<(), Error> {
-    
-    let mut socket_rx = CANSocket::open("can0")?;
-    let socket_tx = CANSocket::open("can0")?;
-    println!("Waiting for can messages...");
-    while let Some(Ok(frame)) = socket_rx.next().await {
-        //socket_tx.write_frame(frame)?.await;
-        println!("msg received {:?}",frame);
-    }
+pub async fn send_can(frame: CANFrame) -> Result<(), Error> {
+
+    let socket_tx = CANSocket::open("vcan0")?;
+    println!("writing on vcan0");
+    socket_tx.write_frame(frame)?.await?;
+    println!("msg received {:?}",frame);
+
     Ok(())
 }

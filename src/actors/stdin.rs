@@ -29,7 +29,7 @@ impl StdInLines {
 
         match parse_result {
             Ok(commands::ParsedCommand::Boss(cmd)) => {
-                let cmd_output = self.execute_command(cmd).await;
+                let _cmd_output = self.execute_command(cmd).await;
                 true
             }
             Ok(commands::ParsedCommand::Exit) => {
