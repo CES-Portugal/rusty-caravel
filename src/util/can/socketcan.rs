@@ -1,14 +1,18 @@
+use log::{debug, error, info, Level};
+use anyhow::{Result, anyhow};
 use futures_util::stream::StreamExt;
-use tokio_socketcan::{CANSocket, Error};
 
-pub use tokio_socketcan::CANFrame;
+pub use tokio_socketcan::{CANFrame, CANSocket};
 
-pub async fn send_can_frame(socket: CANSocket, frame: CANFrame) -> Result<(), Error> {
+pub async fn send_can_frame(socket: &CANSocket, frame: CANFrame) {
 
-    let socket_tx = CANSocket::open("vcan0")?;
-    println!("writing on vcan0");
-    socket_tx.write_frame(frame)?.await?;
-    println!("msg received {:?}",frame);
+    match socket.write_frame(frame).expect("Writing is busted").await {
+        Ok(_) => {
+            debug!("Wrote {:?} # {:?}", socket, frame);
+        }
+        Err(_) => {
+            debug!("Failed writing {:?} # {:?}", socket, frame);
+        }
+    }
 
-    Ok(())
 }

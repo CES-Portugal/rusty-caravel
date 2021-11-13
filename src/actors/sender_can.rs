@@ -1,10 +1,14 @@
+//! Sender CAN actor
+//!
+//! Actor responsible for sending can messages into a can socket
+
+use log::{debug, error, info, Level};
 use tokio::sync::{mpsc};
-//use futures_timer::Delay;
-//use std::time::Duration;
 
 use crate::util::canutil;
-use crate::util::canutil::CANFrame;
+use crate::util::canutil::{CANFrame, CANSocket};
 
+/// Messages that the Actor Can Receive
 enum SenderCANMessages {
     SendToID {
         id: u16,
@@ -14,13 +18,18 @@ enum SenderCANMessages {
 }
 
 struct SenderCAN {
+    socket  : CANSocket,
     receiver: mpsc::Receiver<SenderCANMessages>,
     messages_sent: u32,
 }
 
 impl SenderCAN {
     fn new(receiver: mpsc::Receiver<SenderCANMessages>) -> Self {
+
+        let socket = CANSocket::open("vcan0").expect("yikes");
+
         SenderCAN {
+            socket,
             receiver,
             messages_sent: 0,
         }
@@ -30,7 +39,7 @@ impl SenderCAN {
         match msg {
             SenderCANMessages::SendToID {id, message, cycle_time}=> {
                 let frame = CANFrame::new(12, &[1,2,3], false, false).unwrap();
-                canutil::send_can_frame(frame);
+                canutil::send_can_frame(&self.socket, frame).await;
             },
         }
     }
