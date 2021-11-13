@@ -17,5 +17,5 @@ env_logger = "0.9"
 log = "0.4"
 
 
-[target.armv7-unknown-linux-gnueabihf.dependencies]
+[target.'cfg(not(target_os = "windows"))'.dependencies]
 tokio-socketcan = "0.3.0"
