@@ -4,10 +4,10 @@
 //! Libs using SocketCan do not build on windows, this provides a way to still 
 //! build this project on windows.
 
-use log::{debug, error, info, Level};
+use log::{info};
+use std::fmt;
 use anyhow::Result;
 
-use std::convert::TryInto;
 use std::str::FromStr;
 
 /// CANFrame dummy struct
@@ -19,7 +19,7 @@ pub struct CANFrame {
 }
 
 impl CANFrame {
-    pub fn new(id: u32, data: &[u8], rtr: bool, err: bool) -> Result<Self> {
+    pub fn new(id: u32, data: &[u8], _rtr: bool, _err: bool) -> Result<Self> {
 
         let mut tmp = [0; 8];
         tmp[..data.len()].clone_from_slice(data);
@@ -29,6 +29,12 @@ impl CANFrame {
             data_len: data.len() as u8,
             data: tmp 
         })
+    }
+}
+
+impl fmt::Display for CANFrame {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}#{:x?} {}", self.id, self.data, self.data_len)
     }
 }
 
@@ -44,6 +50,12 @@ impl CANSocket {
     }
 }
 
+impl fmt::Display for CANSocket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "if:{}", self.ifname)
+    }
+}
+
 pub async fn send_can_frame(socket: &CANSocket, frame: CANFrame) {
-    info!("[MOCK] Wrote {:?} # {:?}", socket, frame);
+    info!("[MOCK] Wrote {} {}", socket, frame);
 }

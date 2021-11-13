@@ -1,6 +1,4 @@
 use tokio::signal;
-use tokio::sync::{mpsc};
-use anyhow::anyhow;
 
 struct CtrlCActor {
     notification_channel: tokio::sync::watch::Sender<bool>,
@@ -13,7 +11,7 @@ impl CtrlCActor {
     }
 
     fn ctrlc_announce(self) {
-        self.notification_channel.send(true);
+        self.notification_channel.send(true).expect("CtrlC failed");
     }
 }
 
@@ -24,7 +22,7 @@ async fn run(actor: CtrlCActor) {
 
     println!("Exiting after Ctr+C");
 
-    actor.notification_channel.send(true).expect("Problem sending signal");
+    actor.ctrlc_announce();
 }
 
 
@@ -47,7 +45,7 @@ impl CtrlCActorHandle {
 
     pub async fn wait_for_shutdown(&mut self) -> anyhow::Result<()> {
 
-        self.notification_channel.changed().await;
+        self.notification_channel.changed().await?;
 
         Ok(())
     }

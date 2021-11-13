@@ -10,14 +10,14 @@ enum ReceiverCANMessages {
 
 struct ReceiverCan {
     receiver: mpsc::Receiver<ReceiverCANMessages>,
-    messages_received: u32,
+    _messages_received: u32,
 }
 
 impl ReceiverCan {
     fn new(receiver: mpsc::Receiver<ReceiverCANMessages>) -> Self {
         ReceiverCan {
             receiver,
-            messages_received: 0,
+            _messages_received: 0,
         }
     }
 

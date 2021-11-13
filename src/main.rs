@@ -1,7 +1,5 @@
-use log::{debug, error, info, Level};
+use log::{info};
 use env_logger;
-
-use tokio::signal;
 
 
 mod actors;
@@ -35,5 +33,5 @@ async fn main() {
 
 
 
-    stdin.spawn_handle.await;
+    stdin.spawn_handle.await.expect("TODO remove expects");
 }

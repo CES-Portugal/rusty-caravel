@@ -2,7 +2,6 @@
 //!
 //! Actor responsible for sending can messages into a can socket
 
-use log::{debug, error, info, Level};
 use tokio::sync::{mpsc};
 
 use crate::util::canutil;
@@ -11,16 +10,16 @@ use crate::util::canutil::{CANFrame, CANSocket};
 /// Messages that the Actor Can Receive
 enum SenderCANMessages {
     SendToID {
-        id: u16,
+        id: u32,
         message: u64,
-        cycle_time: u64,
+        _cycle_time: u64,
     }
 }
 
 struct SenderCAN {
     socket  : CANSocket,
     receiver: mpsc::Receiver<SenderCANMessages>,
-    messages_sent: u32,
+    _messages_sent: u32,
 }
 
 impl SenderCAN {
@@ -31,14 +30,14 @@ impl SenderCAN {
         SenderCAN {
             socket,
             receiver,
-            messages_sent: 0,
+            _messages_sent: 0,
         }
     }
 
     async fn handle_message(&mut self, msg: SenderCANMessages) {
         match msg {
-            SenderCANMessages::SendToID {id, message, cycle_time}=> {
-                let frame = CANFrame::new(12, &[1,2,3], false, false).unwrap();
+            SenderCANMessages::SendToID {id, message, _cycle_time: _}=> {
+                let frame = CANFrame::new(id, &message.to_be_bytes(), false, false).unwrap();
                 canutil::send_can_frame(&self.socket, frame).await;
             },
         }
@@ -71,9 +70,9 @@ impl SenderCANHandle {
     }
 
 
-    pub async fn send_can_message(&self, id: u16, message: u64, cycle_time: u64 ) {
+    pub async fn send_can_message(&self, id: u32, message: u64, _cycle_time: u64 ) {
         let msg = SenderCANMessages::SendToID {
-            id, message, cycle_time,
+            id, message, _cycle_time ,
         };
 
         let _ = self.sender.send(msg).await;

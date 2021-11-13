@@ -62,7 +62,7 @@ impl StdInLines {
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
 
         match cmd {
-            BossCommand::SendCan { id, message, cycletime } => self.sender.send_can_message(123, 123, 0).await,
+            BossCommand::SendCan { id: _ , message: _, cycletime: _ } => self.sender.send_can_message(123, 123, 0).await,
             BossCommand::ReceiveCan { id, nrofmessages } => self.receiver.receive_can_msg(id, nrofmessages).await,
         };
         //format!("ran command: {:?}", test)
