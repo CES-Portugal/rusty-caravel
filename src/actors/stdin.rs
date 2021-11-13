@@ -1,4 +1,5 @@
 use super::sender_can::SenderCANHandle;
+use super::ctrlc::CtrlCActorHandle;
 use super::commands;
 use super::receiver_can::ReceiverCANHandle;
 use std::io;
@@ -6,7 +7,7 @@ use std::io::Write;
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
-    watch_receiver: tokio::sync::watch::Receiver<bool>,
+    watch_receiver: CtrlCActorHandle,
     sender: SenderCANHandle,
     receiver: ReceiverCANHandle
 }
@@ -15,7 +16,7 @@ struct StdInLines {
 impl StdInLines {
     fn new (
         line_receiver: tokio::sync::mpsc::Receiver<String>,
-        watch_receiver: tokio::sync::watch::Receiver<bool>,
+        watch_receiver: CtrlCActorHandle,
         sender: SenderCANHandle,
         receiver: ReceiverCANHandle
     ) -> StdInLines {
@@ -95,7 +96,7 @@ async fn run(mut actor: StdInLines) {
                     break;
                 }
             }
-            Ok(_) = actor.watch_receiver.changed() => {
+            Ok(_) = actor.watch_receiver.wait_for_shutdown() => {
                 println!("shutdown");
                 break;
             }
@@ -134,7 +135,7 @@ impl StdInLinesHandle {
 
     pub fn new(
         runtime: tokio::runtime::Handle,
-        watch_receiver: tokio::sync::watch::Receiver<bool>,
+        watch_receiver: CtrlCActorHandle,
         sender: SenderCANHandle,
         receiver: ReceiverCANHandle
     ) -> StdInLinesHandle {
