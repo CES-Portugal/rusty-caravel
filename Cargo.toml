@@ -13,6 +13,8 @@ clap = "2.33.2"
 structopt = "0.3.16"
 shell-words = "1.0.0"
 futures-util = "0.3.17"
+env_logger = "0.9"
+log = "0.4"
 
 
 [target.armv7-unknown-linux-gnueabihf.dependencies]

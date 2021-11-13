@@ -11,11 +11,11 @@ use actors::ctrlc::CtrlCActorHandle;
 #[tokio::main]
 async fn main() {
 
-    let ctrlc = CtrlCActorHandle::new();
+    let receiver = ReceiverCANHandle::new();
 
     let sender = SenderCANHandle::new();
 
-    let receiver = ReceiverCANHandle::new();
+    let ctrlc = CtrlCActorHandle::new();
 
     let stdin  = StdInLinesHandle::new(
         tokio::runtime::Handle::current(),
@@ -23,6 +23,8 @@ async fn main() {
         sender.clone(),
         receiver.clone(),
     );
+
+
 
     stdin.spawn_handle.await;
 }

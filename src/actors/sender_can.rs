@@ -27,21 +27,10 @@ impl SenderCAN {
     }
 
     async fn handle_message(&mut self, msg: SenderCANMessages) {
-        println!("can_handle");
         match msg {
             SenderCANMessages::SendToID {id, message, cycle_time}=> {
-                println!("teste");
                 let frame = CANFrame::new(12, &[1,2,3], false, false).unwrap();
-                //let can_send_rcv = tokio::spawn(can_handler::recv_can(frame));
-                
-                println!("calling can handler");
-                //can_send_rcv.await;
-                //socket_tx.write_frame(frame).await;
-                println!("Msg Sent!");
                 canutil::send_can_frame(frame);
-                // println!("Waiting 3 seconds");
-                // Delay::new(Duration::from_secs(3)).await;
-                //println!("Received {:?}, sending to {:?} with cycle time {:?} ms", message, id, cycle_time);
             },
         }
     }
