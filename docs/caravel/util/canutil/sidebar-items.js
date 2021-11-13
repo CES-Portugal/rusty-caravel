@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["send_can_frame",""]],"struct":[["CANFrame","CANFrame dummy struct"],["CANSocket","CANSocket dummy struct"]]});
