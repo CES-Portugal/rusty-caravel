@@ -19,7 +19,7 @@ async fn main() {
 
     let stdin  = StdInLinesHandle::new(
         tokio::runtime::Handle::current(),
-        ctrlc,
+        ctrlc.clone(),
         sender.clone(),
         receiver.clone(),
     );
