@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["CanCommand",""],["ParsedCommand",""]],"fn":[["parse",""]],"struct":[["Receive",""],["Send",""]]});
