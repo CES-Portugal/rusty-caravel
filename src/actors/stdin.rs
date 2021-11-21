@@ -62,7 +62,15 @@ impl StdInLines {
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
 
         match cmd {
-            BossCommand::SendCan { id: _ , message: _, cycletime: _ } => self.sender.send_can_message(123, 123, 0).await,
+            BossCommand::SendCan { id, message, cycletime: _ } => {
+                let id : u32 = id.parse().expect("TODO handle errors");      // Parse into number
+        
+                let message : u64 = message.parse().expect("TODO handle errors");
+
+                // Cycle is not yet implemented
+                let cycle = 0; 
+                self.sender.send_can_message(id, message, cycle).await
+            },
             BossCommand::ReceiveCan { id, nrofmessages } => self.receiver.receive_can_msg(id, nrofmessages).await,
         };
         //format!("ran command: {:?}", test)
@@ -74,8 +82,8 @@ impl StdInLines {
 #[derive(Debug)]
 pub enum BossCommand {
     SendCan {
-        id: Option<String>,
-        message: Option<String>,
+        id: String,
+        message: String,
         cycletime: Option<String>,
     },
     ReceiveCan {

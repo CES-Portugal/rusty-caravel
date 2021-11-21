@@ -34,7 +34,7 @@ impl CANFrame {
 
 impl fmt::Display for CANFrame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}#{:x?} {}", self.id, self.data, self.data_len)
+        write!(f, "{}#{:x?}", self.id, self.data)
     }
 }
 
@@ -52,10 +52,10 @@ impl CANSocket {
 
 impl fmt::Display for CANSocket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "if:{}", self.ifname)
+        write!(f, "{}", self.ifname)
     }
 }
 
 pub async fn send_can_frame(socket: &CANSocket, frame: CANFrame) {
-    info!("[MOCK] Wrote {} {}", socket, frame);
+    info!("[MOCK] [{}] Write {}", socket, frame);
 }

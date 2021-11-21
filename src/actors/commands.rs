@@ -6,8 +6,8 @@ use anyhow::anyhow;
 #[derive(Debug)]
 #[derive(StructOpt)]
 struct Send {
-    id: Option<String>, 
-    message: Option<String>,
+    id: String, 
+    message: String,
     cycletime: Option<String>,
 }
 
@@ -36,7 +36,7 @@ struct Receive {
                 clap::Arg::with_name("id")
                     .takes_value(true)
                     .multiple(false)
-                    .required(false)
+                    .required(true)
                     .short("i")
                     .long("canid")
                     .help("Id of can message")
@@ -46,7 +46,7 @@ struct Receive {
                 clap::Arg::with_name("message")
                     .takes_value(true)
                     .multiple(false)
-                    .required(false)
+                    .required(true)
                     .short("m")
                     .long("message")
                     .help("message to be send")
