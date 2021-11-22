@@ -1,110 +1,37 @@
-//use std::io::BufRead;
-use tokio::signal;
-//use tokio::sync::watch;
-//use tokio::time::{sleep, Duration};
-//use tokio::sync::broadcast;
-//use tokio::task;
+use log::{info};
+use env_logger;
+
 
 mod actors;
+mod util;
+
 use actors::stdin::StdInLinesHandle;
 use actors::sender_can::SenderCANHandle;
 use actors::receiver_can::ReceiverCANHandle;
-//use actors::can_handler;
-
-// fn start_reading_stdin_lines(
-//     sender: tokio::sync::mpsc::Sender<String>,
-//     runtime: tokio::runtime::Handle
-// ) {
-//     std::thread::spawn(move || {
-//         let stdin = std::io::stdin();
-//         let mut line_buf = String::new();
-//         while let Ok(_) = stdin.read_line(&mut line_buf) {
-//             let line = line_buf.trim_end().to_string();
-//             line_buf.clear();
-//             let sender2 = sender.clone();
-
-//             runtime.spawn(async move {
-//                 let result = sender2.send(line).await;
-//                 if let Err(error) = result {
-//                     println!("start_reading_stdin_lines send error: {:?}", error);
-//                 }
-//             });
-//         }
-//     });
-// }
-
-fn start_activity_until_shutdown(watch_sender: tokio::sync::watch::Sender<bool>) {
-    tokio::spawn(async move {
-        let result = signal::ctrl_c().await;
-        let _result = match result {
-            Ok(res) => res,
-            Err(error) => panic!("Problem with ctrl + C thread, {:?}", error),
-        };
-        println!("Exiting after Ctr+C");
-        let result = watch_sender.send(true);
-        if let Err(error) = result {
-            println!("watch_sender send error: {:?}", error);
-        }
-    });
-}
-
-// async fn read_input(
-//     mut line_receiver: tokio::sync::mpsc::Receiver<String>,
-//     mut watch_receiver: tokio::sync::watch::Receiver<bool>,
-//     _sender: SenderCANHandle
-// ) {
-//     loop {
-//         tokio::select! {
-//             Some(line) = line_receiver.recv() => {
-//                 // process the input
-//                 match line.as_str() {
-//                     "exit" => {
-//                         println!("exiting manually...");
-//                         break;
-//                     },
-//                     "send" => {
-//                         //sender.send_can_message(0x69, [1,2,3]).await;
-//                     }
-//                     unexpected_line => {
-//                         println!("unexpected command: {}", unexpected_line);
-//                     }
-//                 }
-//             }
-//             Ok(_) = watch_receiver.changed() => {
-//                 println!("shutdown");
-//                 break;
-//             }
-//         }
-//     }
-// }
+use actors::ctrlc::CtrlCActorHandle;
 
 
 #[tokio::main]
 async fn main() {
 
-    let (watch_sender, watch_receiver) = tokio::sync::watch::channel(false);
+    env_logger::init();
 
-    let sender = SenderCANHandle::new();
+    info!("Starting runtime");
 
     let receiver = ReceiverCANHandle::new();
 
+    let sender = SenderCANHandle::new();
+
+    let ctrlc = CtrlCActorHandle::new();
+
     let stdin  = StdInLinesHandle::new(
         tokio::runtime::Handle::current(),
-        watch_receiver.clone(),
+        ctrlc.clone(),
         sender.clone(),
         receiver.clone(),
     );
 
-    //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
-    //start_reading_stdin_lines(line_sender, );
 
-    // this will send a shutdown signal at some point
-    start_activity_until_shutdown(watch_sender);
 
-    let res = stdin.spawn_handle.await;
-    let _res = match res {
-        Ok(res) => res,
-        Err(error) => panic!("Problem with stdin, {:?}", error),
-    };
-    //read_input(line_receiver, watch_receiver, sender).await;
+    stdin.spawn_handle.await.expect("TODO remove expects");
 }

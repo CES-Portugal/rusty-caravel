@@ -1,46 +1,44 @@
-use tokio::sync::mpsc;
-//use futures_timer::Delay;
-//use std::time::Duration;
-use tokio_socketcan::CANFrame;
-use super::can_handler;
+//! Sender CAN actor
+//!
+//! Actor responsible for sending can messages into a can socket
 
+use tokio::sync::{mpsc};
+
+use crate::util::canutil;
+use crate::util::canutil::{CANFrame, CANSocket};
+
+/// Messages that the Actor Can Receive
 enum SenderCANMessages {
     SendToID {
-        id: Option<String>,
-        message: Option<String>,
-        cycle_time: Option<String>,
+        id: u32,
+        message: u64,
+        _cycle_time: u64,
     }
 }
 
 struct SenderCAN {
+    socket  : CANSocket,
     receiver: mpsc::Receiver<SenderCANMessages>,
-    messages_sent: u32,
+    _messages_sent: u32,
 }
 
 impl SenderCAN {
     fn new(receiver: mpsc::Receiver<SenderCANMessages>) -> Self {
+
+        let socket = CANSocket::open("vcan0").expect("yikes");
+
         SenderCAN {
+            socket,
             receiver,
-            messages_sent: 0,
+            _messages_sent: 0,
         }
     }
 
     async fn handle_message(&mut self, msg: SenderCANMessages) {
-        println!("can_handle");
         match msg {
-            SenderCANMessages::SendToID {id, message, cycle_time : _}=> {
-                println!("teste");
-                let frame = CANFrame::new(id.unwrap().parse::<u32>().unwrap(), message.unwrap().as_bytes(), false, false).unwrap();
-                let send = tokio::spawn(can_handler::send_can(frame));
-                
-                println!("calling can handler");
-                let result = send.await;
-                let _result = match result {
-                    Ok(res) => res,
-                    Err(error) => panic!("Problem with sending can message, {:?}", error),
-                };
-
-                println!("Msg Sent!");
+            SenderCANMessages::SendToID {id, message, _cycle_time: _}=> {
+                let frame = CANFrame::new(id, &message.to_be_bytes(), false, false).unwrap();
+                canutil::send_can_frame(&self.socket, frame).await;
             },
         }
     }
@@ -72,10 +70,11 @@ impl SenderCANHandle {
     }
 
 
-    pub async fn send_can_message(&self, id: Option<String>, message: Option<String>, cycle_time: Option<String>) {
+    pub async fn send_can_message(&self, id: u32, message: u64, _cycle_time: u64 ) {
         let msg = SenderCANMessages::SendToID {
-            id, message, cycle_time,
+            id, message, _cycle_time ,
         };
+
         let _ = self.sender.send(msg).await;
     }
 }

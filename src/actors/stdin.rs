@@ -1,4 +1,5 @@
 use super::sender_can::SenderCANHandle;
+use super::ctrlc::CtrlCActorHandle;
 use super::commands;
 use super::receiver_can::ReceiverCANHandle;
 use std::io;
@@ -6,7 +7,7 @@ use std::io::Write;
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
-    watch_receiver: tokio::sync::watch::Receiver<bool>,
+    watch_receiver: CtrlCActorHandle,
     sender: SenderCANHandle,
     receiver: ReceiverCANHandle
 }
@@ -15,7 +16,7 @@ struct StdInLines {
 impl StdInLines {
     fn new (
         line_receiver: tokio::sync::mpsc::Receiver<String>,
-        watch_receiver: tokio::sync::watch::Receiver<bool>,
+        watch_receiver: CtrlCActorHandle,
         sender: SenderCANHandle,
         receiver: ReceiverCANHandle
     ) -> StdInLines {
@@ -61,7 +62,15 @@ impl StdInLines {
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
 
         match cmd {
-            BossCommand::SendCan { id, message, cycletime } => self.sender.send_can_message(id, message, cycletime).await,
+            BossCommand::SendCan { id, message, cycletime: _ } => {
+                let id : u32 = id.parse().expect("TODO handle errors");      // Parse into number
+        
+                let message : u64 = message.parse().expect("TODO handle errors");
+
+                // Cycle is not yet implemented
+                let cycle = 0; 
+                self.sender.send_can_message(id, message, cycle).await
+            },
             BossCommand::ReceiveCan { id, nrofmessages } => self.receiver.receive_can_msg(id, nrofmessages).await,
         };
         //format!("ran command: {:?}", test)
@@ -73,8 +82,8 @@ impl StdInLines {
 #[derive(Debug)]
 pub enum BossCommand {
     SendCan {
-        id: Option<String>,
-        message: Option<String>,
+        id: String,
+        message: String,
         cycletime: Option<String>,
     },
     ReceiveCan {
@@ -95,7 +104,7 @@ async fn run(mut actor: StdInLines) {
                     break;
                 }
             }
-            Ok(_) = actor.watch_receiver.changed() => {
+            Ok(_) = actor.watch_receiver.wait_for_shutdown() => {
                 println!("shutdown");
                 break;
             }
@@ -134,7 +143,7 @@ impl StdInLinesHandle {
 
     pub fn new(
         runtime: tokio::runtime::Handle,
-        watch_receiver: tokio::sync::watch::Receiver<bool>,
+        watch_receiver: CtrlCActorHandle,
         sender: SenderCANHandle,
         receiver: ReceiverCANHandle
     ) -> StdInLinesHandle {
