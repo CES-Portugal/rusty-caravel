@@ -7,6 +7,8 @@ use tokio::sync::{mpsc};
 use crate::util::canutil;
 use crate::util::canutil::{CANFrame, CANSocket};
 
+use log::{info};
+
 /// Messages that the Actor Can Receive
 enum SenderCANMessages {
     SendToID {
@@ -45,7 +47,7 @@ impl SenderCAN {
 }
 
 async fn run(mut actor: SenderCAN) {
-    println!("Running...");
+    info!("Running");
 
     while let Some(msg) = actor.receiver.recv().await {
         actor.handle_message(msg).await;

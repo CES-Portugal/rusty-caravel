@@ -1,5 +1,7 @@
 use tokio::signal;
 
+use log::{info};
+
 struct CtrlCActor {
     notification_channel: tokio::sync::watch::Sender<bool>,
 }
@@ -16,7 +18,7 @@ impl CtrlCActor {
 }
 
 async fn run(actor: CtrlCActor) {
-    println!("Running... CtrlCActor");
+    info!("Running");
 
     signal::ctrl_c().await.expect("Problem with Ctrl C");
 

@@ -5,10 +5,12 @@ use std::io;
 use std::io::Write; 
 use shell_words;
 
-use clap::Parser;
+use clap::{ Parser, AppSettings };
+
+use log::{info};
 
 #[derive(Parser)]
-#[clap(version = "0.2.0", author = "marujos")]
+#[clap(version = "0.2.0", author = "marujos", setting=AppSettings::NoBinaryName)]
 pub struct Opts {
     /// Sets a custom config file. Could have been an Option<T> with no default too
     #[clap(short, long)]
@@ -21,6 +23,7 @@ pub struct Opts {
 enum SubCommand {
     Send(Send),
     Receive(Receive),
+    Exit(Exit)
 }
 
 #[derive(Parser)]
@@ -29,6 +32,9 @@ struct Send {
     message: String,
     cycletime: Option<String>,
 }
+
+#[derive(Parser)]
+struct Exit {}
 
 #[derive(Parser)]
 struct Receive {
@@ -54,8 +60,6 @@ impl StdInLines {
     }
 
     async fn handle_command(&mut self, msg: String) -> bool {
-        println!("msg recebida -> {:?}", msg);
-
         let words = shell_words::split(&msg).expect("cmd split went bust");
         
         let cmd : Opts = match Opts::try_parse_from(words) {
@@ -63,75 +67,28 @@ impl StdInLines {
             Err(error) => { println!("{}", error); return true }
         };
 
-        //let parse_result = commands::parse(&msg);
-
-        //match parse_result {
-        //    Ok(commands::ParsedCommand::Boss(cmd)) => {
-        //        let _cmd_output = self.execute_command(cmd).await;
-        //        true
-        //    }
-        //    Ok(commands::ParsedCommand::Exit) => {
-        //        println!("exiting manually..."); 
-        //        false
-        //    },
-        //    Err(e) => {
-        //        println!("{}",e);
-        //        true
-        //    }
-        //}
-        // match msg.as_str() {
-        //     "exit" => { 
-        //         println!("exiting manually..."); 
-        //         false 
-        //     },
-        //     "send" => {
-        //         self.sender.send_can_message(0x69, [1,2,3]).await;
-        //         true
-        //     },
-        //     unexpected_line => {
-        //         println!("unexpected command: {}", unexpected_line);
-        //         true
-        //     }
-        // }
-        true
-    }
-
-    async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
-
-        match cmd {
-            BossCommand::SendCan { id, message, cycletime: _ } => {
-                let id : u32 = id.parse().expect("TODO handle errors");      // Parse into number
+        match cmd.subcmd {
+            SubCommand::Send(t) => {
+                let id : u32 = t.id.parse().expect("TODO handle errors"); // Parse into number
         
-                let message : u64 = message.parse().expect("TODO handle errors");
+                let message : u64 = t.message.parse().expect("TODO handle errors");
 
-                // Cycle is not yet implemented
                 let cycle = 0; 
-                self.sender.send_can_message(id, message, cycle).await
+                self.sender.send_can_message(id, message, cycle).await;
+                true
             },
-            BossCommand::ReceiveCan { id, nrofmessages } => self.receiver.receive_can_msg(id, nrofmessages).await,
-        };
-        //format!("ran command: {:?}", test)
-        format!("ran command: ")
+            SubCommand::Receive(t) => {
+                self.receiver.receive_can_msg(t.id, t.nr_of_messages).await;
+                true
+            },
+            SubCommand::Exit(_t) => { false }
+        }
+
     }
 }
-
-
-#[derive(Debug)]
-pub enum BossCommand {
-    SendCan {
-        id: String,
-        message: String,
-        cycletime: Option<String>,
-    },
-    ReceiveCan {
-        id: Option<String>,
-        nrofmessages: Option<String>
-    },
-}
-
 
 async fn run(mut actor: StdInLines) {
-    println!("Processing INPUTS");
+    info!("Running");
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
