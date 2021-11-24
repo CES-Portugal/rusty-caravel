@@ -4,6 +4,7 @@ use super::commands;
 use super::receiver_can::ReceiverCANHandle;
 use std::io;
 use std::io::Write; 
+use tokio::time::{sleep, Duration};
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
@@ -62,29 +63,44 @@ impl StdInLines {
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
 
         match cmd {
-            BossCommand::SendCan { id, message, cycletime: _ } => {
+            BossCommand::SendCan { id, message, cycletime } => {
+                
                 let id : u32 = id.parse().expect("TODO handle errors");      // Parse into number
-        
+                
                 let message : u64 = message.parse().expect("TODO handle errors");
 
-                // Cycle is not yet implemented
-                let cycle = 0; 
-                self.sender.send_can_message(id, message, cycle).await
+                let cycletime : u64 = cycletime.parse().expect("TODO handle errors");
+                
+                if cycletime == 0 {
+                    self.sender.send_can_message(id, message, cycletime).await;
+                }
+                else {
+                    tokio::spawn(cyclic_sender(self.sender.clone(), id, message, cycletime));
+                }
             },
             BossCommand::ReceiveCan { id, nrofmessages } => self.receiver.receive_can_msg(id, nrofmessages).await,
         };
         //format!("ran command: {:?}", test)
         format!("ran command: ")
     }
+
+
+    
 }
 
+async fn cyclic_sender(sender: SenderCANHandle, id: u32, message : u64, cycletime: u64) {
+    loop {
+        sleep(Duration::from_millis(cycletime)).await;
+        sender.send_can_message(id, message, cycletime).await
+    }
+}
 
 #[derive(Debug)]
 pub enum BossCommand {
     SendCan {
         id: String,
         message: String,
-        cycletime: Option<String>,
+        cycletime: String,
     },
     ReceiveCan {
         id: Option<String>,

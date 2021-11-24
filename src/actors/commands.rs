@@ -8,7 +8,7 @@ use anyhow::anyhow;
 struct Send {
     id: String, 
     message: String,
-    cycletime: Option<String>,
+    cycletime: String,
 }
 
 
