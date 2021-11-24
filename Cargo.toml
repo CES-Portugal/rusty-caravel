@@ -9,7 +9,7 @@ edition = "2018"
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 anyhow = "1.0.32"
-clap = "2.33.2"
+clap = "3.0.0-beta.5"
 structopt = "0.3.16"
 shell-words = "1.0.0"
 futures-util = "0.3.17"

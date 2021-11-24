@@ -1,9 +1,40 @@
 use super::sender_can::SenderCANHandle;
 use super::ctrlc::CtrlCActorHandle;
-use super::commands;
 use super::receiver_can::ReceiverCANHandle;
 use std::io;
 use std::io::Write; 
+use shell_words;
+
+use clap::Parser;
+
+#[derive(Parser)]
+#[clap(version = "0.2.0", author = "marujos")]
+pub struct Opts {
+    /// Sets a custom config file. Could have been an Option<T> with no default too
+    #[clap(short, long)]
+    config: Option<String>,
+    #[clap(subcommand)]
+    subcmd: SubCommand,
+}
+
+#[derive(Parser)]
+enum SubCommand {
+    Send(Send),
+    Receive(Receive),
+}
+
+#[derive(Parser)]
+struct Send {
+    id: String, 
+    message: String,
+    cycletime: Option<String>,
+}
+
+#[derive(Parser)]
+struct Receive {
+    id: Option<String>,
+    nr_of_messages: Option<String>,
+}
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
@@ -11,7 +42,6 @@ struct StdInLines {
     sender: SenderCANHandle,
     receiver: ReceiverCANHandle
 }
-
 
 impl StdInLines {
     fn new (
@@ -25,23 +55,30 @@ impl StdInLines {
 
     async fn handle_command(&mut self, msg: String) -> bool {
         println!("msg recebida -> {:?}", msg);
-        
-        let parse_result = commands::parse(&msg);
 
-        match parse_result {
-            Ok(commands::ParsedCommand::Boss(cmd)) => {
-                let _cmd_output = self.execute_command(cmd).await;
-                true
-            }
-            Ok(commands::ParsedCommand::Exit) => {
-                println!("exiting manually..."); 
-                false
-            },
-            Err(e) => {
-                println!("{}",e);
-                true
-            }
-        }
+        let words = shell_words::split(&msg).expect("cmd split went bust");
+        
+        let cmd : Opts = match Opts::try_parse_from(words) {
+            Ok(opts) => opts,
+            Err(error) => { println!("{}", error); return true }
+        };
+
+        //let parse_result = commands::parse(&msg);
+
+        //match parse_result {
+        //    Ok(commands::ParsedCommand::Boss(cmd)) => {
+        //        let _cmd_output = self.execute_command(cmd).await;
+        //        true
+        //    }
+        //    Ok(commands::ParsedCommand::Exit) => {
+        //        println!("exiting manually..."); 
+        //        false
+        //    },
+        //    Err(e) => {
+        //        println!("{}",e);
+        //        true
+        //    }
+        //}
         // match msg.as_str() {
         //     "exit" => { 
         //         println!("exiting manually..."); 
@@ -56,7 +93,7 @@ impl StdInLines {
         //         true
         //     }
         // }
-        //true
+        true
     }
 
     async fn execute_command(&mut self, cmd: BossCommand) -> impl std::fmt::Display {
