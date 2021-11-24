@@ -34,7 +34,7 @@ impl CANFrame {
 
 impl fmt::Display for CANFrame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}#{:x?}", self.id, self.data)
+        write!(f, "{}#{:x?} {}", self.id, self.data, self.data_len)
     }
 }
 

@@ -1,5 +1,6 @@
 use tokio::sync::mpsc;
 
+use log::{info};
 
 enum ReceiverCANMessages {
     ReceiveFromId {
@@ -31,7 +32,7 @@ impl ReceiverCan {
 }
 
 async fn run(mut actor: ReceiverCan) {
-    println!("Running Receiver Can...");
+    info!("Running");
 
     while let Some(msg) = actor.receiver.recv().await {
         actor.handle_receiver(msg);
