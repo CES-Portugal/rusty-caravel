@@ -1,6 +1,7 @@
 use super::sender_can::SenderCANHandle;
 use super::ctrlc::CtrlCActorHandle;
 use super::receiver_can::ReceiverCANHandle;
+use super::simulation::monitor;
 use std::io;
 use std::io::Write; 
 use shell_words;
@@ -136,12 +137,14 @@ pub struct StdInLinesHandle {
 impl StdInLinesHandle {
 
     pub fn new(
+        mut simulation : &mut monitor,
         runtime: tokio::runtime::Handle,
         watch_receiver: CtrlCActorHandle,
         sender: SenderCANHandle,
         receiver: ReceiverCANHandle
     ) -> StdInLinesHandle {
-
+        
+        simulation.stdin +=1;
         let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
 
         reading_stdin_lines(runtime, line_sender);

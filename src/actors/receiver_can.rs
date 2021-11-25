@@ -1,5 +1,5 @@
 use tokio::sync::mpsc;
-
+use super::simulation::monitor;
 use log::{info};
 
 enum ReceiverCANMessages {
@@ -47,7 +47,8 @@ pub struct ReceiverCANHandle {
 
 impl ReceiverCANHandle {
 
-    pub fn new() -> Self  {
+    pub fn new(mut simulation : &mut monitor) -> Self  {
+        simulation.receiver += 1;
         let (sender, receiver) = mpsc::channel(9);
         let actor = ReceiverCan::new(receiver);
 

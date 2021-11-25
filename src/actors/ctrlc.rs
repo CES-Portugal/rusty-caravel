@@ -1,5 +1,5 @@
 use tokio::signal;
-
+use super::simulation::monitor;
 use log::{info};
 
 struct CtrlCActor {
@@ -35,7 +35,8 @@ pub struct CtrlCActorHandle {
 
 impl CtrlCActorHandle {
 
-    pub fn new() -> Self {
+    pub fn new(mut simulation : &mut monitor) -> Self {
+        simulation.ctrlc += 1;
         let (sender, receiver) = tokio::sync::watch::channel(false);
 
         let actor = CtrlCActor::new(sender);

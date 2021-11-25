@@ -4,6 +4,7 @@
 
 use tokio::sync::{mpsc};
 
+use super::simulation::monitor;
 use crate::util::canutil;
 use crate::util::canutil::{CANFrame, CANSocket};
 
@@ -62,7 +63,8 @@ pub struct SenderCANHandle {
 
 impl SenderCANHandle {
 
-    pub fn new() -> Self {
+    pub fn new(mut simulation : &mut monitor) -> Self {
+        simulation.sender += 1;
         let (sender, receiver) = mpsc::channel(8);
         let actor = SenderCAN::new(receiver);
 
