@@ -11,7 +11,8 @@ The one stop tool for everything automotive related
 
 You will need to have rust installed [link](https://www.rust-lang.org/tools/install)
 
-
+To compile for raspberry pi first you'll have to run
+rustup target add armv7-unknown-linux-gnueabihf
 After cloning the repo you can start the caravel cli with the following command in the main folder:
 `cargo run`
 

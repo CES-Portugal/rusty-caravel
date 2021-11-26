@@ -4,4 +4,5 @@ echo "Deploying..."
 echo "Send file to caravel hardware"
 echo "You need to enter the password"
 
-scp -P 1337 .\target\armv7-unknown-linux-gnueabihf\release\caravel pi@10.170.208.45:/home/pi/caravel/
+# scp -P 1337 .\target\armv7-unknown-linux-gnueabihf\release\caravel pi@10.170.208.45:/home/pi/caravel/
+scp .\target\armv7-unknown-linux-gnueabihf\release\caravel pi@192.168.1.18:/home/pi/caravel/
