@@ -3,6 +3,7 @@ use super::ctrlc::CtrlCActorHandle;
 use super::receiver_can::ReceiverCANHandle;
 use std::io;
 use std::io::Write; 
+use tokio::time::{sleep, Duration};
 use shell_words;
 
 use clap::{ Parser, AppSettings };
@@ -30,7 +31,7 @@ enum SubCommand {
 struct Send {
     id: String, 
     message: String,
-    cycletime: Option<String>,
+    cycletime: String,
 }
 
 #[derive(Parser)]
@@ -73,9 +74,17 @@ impl StdInLines {
         
                 let message : u64 = t.message.parse().expect("TODO handle errors");
 
-                let cycle = 0; 
-                self.sender.send_can_message(id, message, cycle).await;
-                true
+                let cycletime : u64 = t.cycletime.parse().expect("TODO handle errors");
+                
+                if cycletime == 0 {
+                    self.sender.send_can_message(id, message, cycletime).await;
+                    true
+                }
+                else {
+                    tokio::spawn(cyclic_sender(self.sender.clone(), id, message, cycletime));
+                    true
+                }
+
             },
             SubCommand::Receive(t) => {
                 self.receiver.receive_can_msg(t.id, t.nr_of_messages).await;
@@ -83,7 +92,13 @@ impl StdInLines {
             },
             SubCommand::Exit(_t) => { false }
         }
+    }
+}
 
+async fn cyclic_sender(sender: SenderCANHandle, id: u32, message : u64, cycletime: u64) {
+    loop {
+        sleep(Duration::from_millis(cycletime)).await;
+        sender.send_can_message(id, message, cycletime).await
     }
 }
 
