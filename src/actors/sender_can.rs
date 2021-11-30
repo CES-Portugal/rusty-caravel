@@ -28,7 +28,7 @@ struct SenderCAN {
 impl SenderCAN {
     fn new(receiver: mpsc::Receiver<SenderCANMessages>) -> Self {
 
-        let socket = CANSocket::open("vcan0").expect("yikes");
+        let socket = CANSocket::open("can0").expect("yikes");
 
         SenderCAN {
             socket,
