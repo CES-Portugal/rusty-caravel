@@ -27,12 +27,17 @@ The following commands are accepted:
 - `exit`
 > Exits the cli
 
-
-
 1. `send -i 35b -m "some message" -c 0`
 Sends 1 time message with can id 35b and message "some message"
 2. `receive -i 40a -n 10`
 Waits to receive 10 times can message with id 40a
+
+## Deploy on raspberry pi
+
+There is a powershell deploy script under the scripts folder. It needs to be ran with the desired ip as argument. \n
+If you want to run it on Agata leave the argument empty.
+From the main folder run the following command on windows:
+- `.\scripts\deploy.ps1 192.168.1.1`
 
 ## Build for raspberrypi
 
