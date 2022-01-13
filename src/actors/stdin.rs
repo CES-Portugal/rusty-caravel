@@ -1,14 +1,14 @@
-use super::sender_can::SenderCANHandle;
 use super::ctrlc::CtrlCActorHandle;
 use super::receiver_can::ReceiverCANHandle;
-use std::io;
-use std::io::Write; 
-use tokio::time::{sleep, Duration};
+use super::{monitor::MonitorHandle, sender_can::SenderCANHandle};
 use shell_words;
+use std::io;
+use std::io::Write;
+use tokio::time::{sleep, Duration};
 
-use clap::{ Parser, AppSettings };
+use clap::{AppSettings, Parser};
 
-use log::{info};
+use log::info;
 
 #[derive(Parser)]
 #[clap(version = "0.2.0", author = "marujos", setting=AppSettings::NoBinaryName)]
@@ -24,12 +24,12 @@ pub struct Opts {
 enum SubCommand {
     Send(Send),
     Receive(Receive),
-    Exit(Exit)
+    Exit(Exit),
 }
 
 #[derive(Parser)]
 struct Send {
-    id: String, 
+    id: String,
     message: String,
     cycletime: String,
 }
@@ -42,65 +42,69 @@ struct Receive {
     id: Option<String>,
     nr_of_messages: Option<String>,
 }
+/*
 
 struct StdInLines {
     line_receiver: tokio::sync::mpsc::Receiver<String>,
     watch_receiver: CtrlCActorHandle,
     sender: SenderCANHandle,
-    receiver: ReceiverCANHandle
+    receiver: ReceiverCANHandle,
 }
 
 impl StdInLines {
-    fn new (
+    fn new(
         line_receiver: tokio::sync::mpsc::Receiver<String>,
-        watch_receiver: CtrlCActorHandle,
-        sender: SenderCANHandle,
-        receiver: ReceiverCANHandle
+        monitor: MonitorHandle,
     ) -> StdInLines {
-        StdInLines { line_receiver, watch_receiver, sender, receiver }
+        StdInLines {
+            line_receiver,
+            monitor,
+        }
     }
 
     async fn handle_command(&mut self, msg: String) -> bool {
         let words = shell_words::split(&msg).expect("cmd split went bust");
-        
-        let cmd : Opts = match Opts::try_parse_from(words) {
+
+        let cmd: Opts = match Opts::try_parse_from(words) {
             Ok(opts) => opts,
-            Err(error) => { println!("{}", error); return true }
+            Err(error) => {
+                println!("{}", error);
+                return true;
+            }
         };
 
         match cmd.subcmd {
             SubCommand::Send(t) => {
-                let id : u32 = t.id.parse().expect("TODO handle errors"); // Parse into number
-        
-                let message : u64 = t.message.parse().expect("TODO handle errors");
+                //let id: u32 = t.id.parse().expect("TODO handle errors"); // Parse into number
 
-                let cycletime : u64 = t.cycletime.parse().expect("TODO handle errors");
-                
-                if cycletime == 0 {
-                    self.sender.send_can_message(id, message, cycletime).await;
-                    true
-                }
-                else {
-                    tokio::spawn(cyclic_sender(self.sender.clone(), id, message, cycletime));
-                    true
-                }
+                //let message: u64 = t.message.parse().expect("TODO handle errors");
 
-            },
-            SubCommand::Receive(t) => {
-                self.receiver.receive_can_msg(t.id, t.nr_of_messages).await;
+                //let cycletime: u64 = t.cycletime.parse().expect("TODO handle errors");
+
+                //if cycletime == 0 {
+                //    self.sender.send_can_message(id, message, cycletime).await;
+                //    true
+                //} else {
+                //    tokio::spawn(cyclic_sender(self.sender.clone(), id, message, cycletime));
+                //    true
+                //}
                 true
-            },
-            SubCommand::Exit(_t) => { false }
+            }
+            SubCommand::Receive(t) => {
+                //self.receiver.receive_can_msg(t.id, t.nr_of_messages).await;
+                true
+            }
+            SubCommand::Exit(_t) => false,
         }
     }
 }
 
-async fn cyclic_sender(sender: SenderCANHandle, id: u32, message : u64, cycletime: u64) {
-    loop {
-        sleep(Duration::from_millis(cycletime)).await;
-        sender.send_can_message(id, message, cycletime).await
-    }
-}
+//async fn cyclic_sender(sender: SenderCANHandle, id: u32, message: u64, cycletime: u64) {
+//    loop {
+//        sleep(Duration::from_millis(cycletime)).await;
+//        sender.send_can_message(id, message, cycletime).await
+//    }
+//}
 
 async fn run(mut actor: StdInLines) {
     info!("Running");
@@ -120,12 +124,9 @@ async fn run(mut actor: StdInLines) {
         }
     }
 }
+*/
 
-
-fn reading_stdin_lines(
-    runtime: tokio::runtime::Handle,
-    sender: tokio::sync::mpsc::Sender<String>
-) {
+fn reading_stdin_lines(runtime: tokio::runtime::Handle, sender: tokio::sync::mpsc::Sender<String>) {
     std::thread::spawn(move || {
         let stdin = std::io::stdin();
         let mut line_buf = String::new();
@@ -145,26 +146,25 @@ fn reading_stdin_lines(
 }
 
 pub struct StdInLinesHandle {
-    pub spawn_handle: tokio::task::JoinHandle<()>
+    //pub spawn_handle: tokio::task::JoinHandle<()>
 }
 
 impl StdInLinesHandle {
-
-    pub fn new(
-        runtime: tokio::runtime::Handle,
-        watch_receiver: CtrlCActorHandle,
-        sender: SenderCANHandle,
-        receiver: ReceiverCANHandle
+    pub fn new(//runtime: tokio::runtime::Handle,
+        //watch_receiver: CtrlCActorHandle,
+        //sender: SenderCANHandle,
+        //receiver: ReceiverCANHandle
     ) -> StdInLinesHandle {
+        //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
 
-        let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
+        //reading_stdin_lines(runtime, line_sender);
 
-        reading_stdin_lines(runtime, line_sender);
+        //let actor = StdInLines::new(line_receiver, watch_receiver, sender, receiver);
 
-        let actor = StdInLines::new(line_receiver, watch_receiver, sender, receiver);
+        //let spawn_handle = tokio::spawn(run(actor));
 
-        let spawn_handle = tokio::spawn(run(actor));
+        //Self { spawn_handle }
 
-        Self {spawn_handle}
+        Self {}
     }
 }
