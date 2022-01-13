@@ -1,55 +1,64 @@
-use tokio::signal;
+use tokio::{signal, sync::mpsc};
 
-use log::{info};
+use log::info;
+
+use super::monitor::{self, MonitorHandle};
+
+#[derive(Debug)]
+enum Messages {
+    CleanExit,
+}
 
 struct CtrlCActor {
-    notification_channel: tokio::sync::watch::Sender<bool>,
+    inbox: mpsc::Receiver<Messages>,
+    monitor_handle: MonitorHandle,
 }
 
 impl CtrlCActor {
-
-    fn new(notification_channel: tokio::sync::watch::Sender<bool>) -> Self { 
-        CtrlCActor { notification_channel } 
+    fn new(monitor_handle: MonitorHandle, inbox: mpsc::Receiver<Messages>) -> Self {
+        CtrlCActor {
+            inbox,
+            monitor_handle,
+        }
     }
 
-    fn ctrlc_announce(self) {
-        self.notification_channel.send(true).expect("CtrlC failed");
+    async fn tell_monitor(&self) {
+        self.monitor_handle.ctrl_c_received().await;
     }
 }
 
-async fn run(actor: CtrlCActor) {
+async fn run(mut actor: CtrlCActor) {
     info!("Running");
 
-    signal::ctrl_c().await.expect("Problem with Ctrl C");
+    tokio::select! {
+        _ = signal::ctrl_c() => {
+            actor.tell_monitor().await
+        },
+        _ = actor.inbox.recv() => { },
+    }
 
-    println!("Exiting after Ctr+C");
-
-    actor.ctrlc_announce();
+    info!("Shutting Down");
 }
-
 
 #[derive(Clone)]
 pub struct CtrlCActorHandle {
-    notification_channel: tokio::sync::watch::Receiver<bool>,
+    inbox: mpsc::Sender<Messages>,
 }
 
 impl CtrlCActorHandle {
+    pub fn new(monitor: MonitorHandle) -> Self {
+        let (sender, receiver) = mpsc::channel(1);
 
-    pub fn new() -> Self {
-        let (sender, receiver) = tokio::sync::watch::channel(false);
-
-        let actor = CtrlCActor::new(sender);
+        let actor = CtrlCActor::new(monitor, receiver);
 
         tokio::spawn(run(actor));
 
-        Self { notification_channel: receiver }
+        Self { inbox: sender }
     }
 
-    pub async fn wait_for_shutdown(&mut self) -> anyhow::Result<()> {
+    pub async fn clean_shutdown(&self) {
+        let msg = Messages::CleanExit;
 
-        self.notification_channel.changed().await?;
-
-        Ok(())
+        self.inbox.send(msg).await.expect("could not send message");
     }
-
 }
