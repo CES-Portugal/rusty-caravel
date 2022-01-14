@@ -1,10 +1,6 @@
-use super::ctrlc::CtrlCActorHandle;
-use super::receiver_can::ReceiverCANHandle;
-use super::{monitor::MonitorHandle, sender_can::SenderCANHandle};
+use super::monitor::MonitorHandle;
 use shell_words;
-use std::io;
-use std::io::Write;
-use tokio::time::{sleep, Duration};
+use tokio::sync::mpsc;
 
 use clap::{AppSettings, Parser};
 
@@ -42,23 +38,31 @@ struct Receive {
     id: Option<String>,
     nr_of_messages: Option<String>,
 }
-/*
+
+#[derive(Debug)]
+enum Messages {
+    Line { line: String },
+    Shutdown,
+}
 
 struct StdInLines {
-    line_receiver: tokio::sync::mpsc::Receiver<String>,
-    watch_receiver: CtrlCActorHandle,
-    sender: SenderCANHandle,
-    receiver: ReceiverCANHandle,
+    inbox: mpsc::Receiver<Messages>,
+    monitor: MonitorHandle,
 }
 
 impl StdInLines {
-    fn new(
-        line_receiver: tokio::sync::mpsc::Receiver<String>,
-        monitor: MonitorHandle,
-    ) -> StdInLines {
-        StdInLines {
-            line_receiver,
-            monitor,
+    fn new(inbox: mpsc::Receiver<Messages>, monitor: MonitorHandle) -> Self {
+        StdInLines { inbox, monitor }
+    }
+
+    async fn tell_monitor(&self) {
+        self.monitor.exit_received().await.unwrap();
+    }
+
+    async fn handle_message(&mut self, msg: Messages) -> bool {
+        match msg {
+            Messages::Shutdown => false,
+            Messages::Line { line } => self.handle_command(line).await,
         }
     }
 
@@ -94,7 +98,10 @@ impl StdInLines {
                 //self.receiver.receive_can_msg(t.id, t.nr_of_messages).await;
                 true
             }
-            SubCommand::Exit(_t) => false,
+            SubCommand::Exit(_t) => {
+                self.tell_monitor().await;
+                false
+            }
         }
     }
 }
@@ -108,35 +115,30 @@ impl StdInLines {
 
 async fn run(mut actor: StdInLines) {
     info!("Running");
-    loop {
-        print!("> ");
-        io::stdout().flush().unwrap();
-        tokio::select! {
-            Some(line) = actor.line_receiver.recv() => {
-                if !actor.handle_command(line).await {
-                    break;
-                }
-            }
-            Ok(_) = actor.watch_receiver.wait_for_shutdown() => {
-                println!("shutdown");
-                break;
-            }
+
+    while let Some(msg) = actor.inbox.recv().await {
+        if !actor.handle_message(msg).await {
+            break;
         }
     }
-}
-*/
 
-fn reading_stdin_lines(runtime: tokio::runtime::Handle, sender: tokio::sync::mpsc::Sender<String>) {
+    info!("Shutting Down");
+}
+
+fn reading_stdin_lines(sender: mpsc::Sender<Messages>) {
+    let runtime = tokio::runtime::Handle::current();
     std::thread::spawn(move || {
+        let sender = sender.clone();
         let stdin = std::io::stdin();
         let mut line_buf = String::new();
         while let Ok(_) = stdin.read_line(&mut line_buf) {
+            let sender = sender.clone();
             let line = line_buf.trim_end().to_string();
             line_buf.clear();
-            let sender2 = sender.clone();
 
             runtime.spawn(async move {
-                let result = sender2.send(line).await;
+                let message = Messages::Line { line };
+                let result = sender.send(message).await;
                 if let Err(error) = result {
                     println!("start_reading_stdin_lines send error: {:?}", error);
                 }
@@ -146,25 +148,31 @@ fn reading_stdin_lines(runtime: tokio::runtime::Handle, sender: tokio::sync::mps
 }
 
 pub struct StdInLinesHandle {
-    //pub spawn_handle: tokio::task::JoinHandle<()>
+    inbox: mpsc::Sender<Messages>,
 }
 
 impl StdInLinesHandle {
-    pub fn new(//runtime: tokio::runtime::Handle,
+    pub fn new(
+        // runtime: tokio::runtime::Handle,
         //watch_receiver: CtrlCActorHandle,
         //sender: SenderCANHandle,
         //receiver: ReceiverCANHandle
+        monitor: MonitorHandle,
     ) -> StdInLinesHandle {
-        //let (line_sender, line_receiver) = tokio::sync::mpsc::channel(1);
+        let (tx, inbox) = tokio::sync::mpsc::channel(5);
 
-        //reading_stdin_lines(runtime, line_sender);
+        reading_stdin_lines(tx.clone());
 
-        //let actor = StdInLines::new(line_receiver, watch_receiver, sender, receiver);
+        let actor = StdInLines::new(inbox, monitor);
 
-        //let spawn_handle = tokio::spawn(run(actor));
+        tokio::spawn(run(actor));
 
-        //Self { spawn_handle }
+        Self { inbox: tx }
+    }
 
-        Self {}
+    pub async fn shutdown(&self) {
+        let msg = Messages::Shutdown;
+
+        self.inbox.try_send(msg).expect("What ?");
     }
 }
