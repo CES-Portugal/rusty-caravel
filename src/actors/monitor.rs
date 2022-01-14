@@ -1,8 +1,6 @@
 use anyhow::Result;
 use log::info;
-use std::collections::HashMap;
-use tokio::runtime;
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::sync::{mpsc, watch};
 
 use super::ctrlc::CtrlCActorHandle;
 use super::sender_can::SenderCANHandle;
@@ -16,6 +14,7 @@ enum MonitorMessages {
     AddToMonitor,
     RemoveFromMonitor,
     UglyExit,
+    CleanExit,
     Exit,
 }
 
@@ -23,8 +22,8 @@ pub struct Monitor {
     handler: MonitorHandle,
     shutdown: watch::Sender<bool>,
     ctrlc_actor: Option<CtrlCActorHandle>,
-    console_actor: Vec<StdInLinesHandle>,
-    CANSenders: Vec<SenderCANHandle>,
+    console_actor: Option<StdInLinesHandle>,
+    can_senders: Vec<SenderCANHandle>,
     inbox: mpsc::Receiver<MonitorMessages>,
 }
 
@@ -34,16 +33,14 @@ impl Monitor {
         shutdown: watch::Sender<bool>,
         handler: MonitorHandle,
     ) -> Self {
-        let CANSenders = Vec::new();
-
-        let console_actor = Vec::new();
+        let can_senders = Vec::new();
 
         Monitor {
             handler,
             shutdown,
             ctrlc_actor: None,
-            console_actor,
-            CANSenders,
+            console_actor: None,
+            can_senders,
             inbox,
         }
     }
@@ -57,7 +54,11 @@ impl Monitor {
 
             MonitorMessages::UglyExit => {
                 self.ctrlc_actor = None;
-                self.shutdown.send(true);
+                false
+            }
+
+            MonitorMessages::CleanExit => {
+                self.console_actor = None;
                 false
             }
 
@@ -69,13 +70,13 @@ impl Monitor {
 
             MonitorMessages::SpawnSender => {
                 let sender = SenderCANHandle::new();
-                self.CANSenders.push(sender);
+                self.can_senders.push(sender);
                 true
             }
 
             MonitorMessages::SpawnConsole => {
-                let sender = StdInLinesHandle::new();
-                self.console_actor.push(sender);
+                let sender = StdInLinesHandle::new(self.handler.clone());
+                self.console_actor = Some(sender);
                 true
             }
 
@@ -95,8 +96,17 @@ pub async fn run(mut actor: Monitor) {
 
     // tell CtrlC actor to shutdown
     if let Some(ctrlc) = actor.ctrlc_actor {
+        info!("telling ctrlc watcher to shutdown");
         ctrlc.clean_shutdown().await;
     }
+
+    // tell Console actor to shutdown
+    if let Some(console) = actor.console_actor {
+        info!("telling console to shutdown");
+        console.shutdown().await;
+    }
+
+    actor.shutdown.send(true).unwrap();
 
     info!("Shuting Down");
 }
@@ -125,9 +135,10 @@ impl MonitorHandle {
     }
 
     pub async fn wait_to_die_like_in_life(&mut self) {
-        self.shutdown.changed().await;
+        self.shutdown.changed().await.unwrap();
     }
 
+    /*
     pub async fn shutdown(&self) -> Result<()> {
         let msg = MonitorMessages::Exit;
 
@@ -135,9 +146,18 @@ impl MonitorHandle {
 
         Ok(())
     }
+    */
 
     pub async fn ctrl_c_received(&self) -> Result<()> {
         let msg = MonitorMessages::UglyExit;
+
+        self.inbox.send(msg).await.expect("failed to send message");
+
+        Ok(())
+    }
+
+    pub async fn exit_received(&self) -> Result<()> {
+        let msg = MonitorMessages::CleanExit;
 
         self.inbox.send(msg).await.expect("failed to send message");
 
@@ -160,11 +180,14 @@ impl MonitorHandle {
         Ok(())
     }
 
-    pub async fn spawn_sender(&self) -> Result<()> {
-        let msg = MonitorMessages::SpawnSender;
+    /*
 
-        self.inbox.send(msg).await.expect("failed to send message");
+       pub async fn spawn_sender(&self) -> Result<()> {
+           let msg = MonitorMessages::SpawnSender;
 
-        Ok(())
-    }
+           self.inbox.send(msg).await.expect("failed to send message");
+
+           Ok(())
+       }
+    */
 }

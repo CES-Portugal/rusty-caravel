@@ -1,8 +1,6 @@
-use tokio::{signal, sync::mpsc};
-
+use super::monitor::MonitorHandle;
 use log::info;
-
-use super::monitor::{self, MonitorHandle};
+use tokio::{signal, sync::mpsc};
 
 #[derive(Debug)]
 enum Messages {
@@ -23,7 +21,7 @@ impl CtrlCActor {
     }
 
     async fn tell_monitor(&self) {
-        self.monitor_handle.ctrl_c_received().await;
+        self.monitor_handle.ctrl_c_received().await.unwrap();
     }
 }
 
